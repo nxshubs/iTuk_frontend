@@ -1,34 +1,24 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, User, MapPin, Phone, Mail, Star, MessageCircle } from "lucide-react"
-import WhatsAppIcon from "../../components/ui/whatsapp"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, User, Phone, Mail, Star, MessageSquare, AlertTriangle, Check, X, Tag } from "lucide-react";
+import WhatsAppIcon from "@/components/ui/whatsapp";
+import { toast } from "sonner";
+import Cookies from "js-cookie";
+import Link from "next/link";
 
-interface Appointment {
-  id: string
-  clientName?: string
-  providerName?: string
-  service: string
-  date: string
-  time: string
-  status: "upcoming" | "completed" | "cancelled"
-  price?: string
-  location?: string
-  phone?: string
-  email?: string
-  notes?: string
-  rating?: number
-  paymentMethod: string
-  whatsapp: string
-}
+import type { Appointment } from "@/types/Appointment";
+
 
 interface AppointmentDetailsModalProps {
-  appointment: Appointment | null
-  isOpen: boolean
-  onClose: () => void
-  userType: "CLIENT" | "PROVIDER"
+  appointment: Appointment | null;
+  isOpen: boolean;
+  onClose: () => void;
+  userType: "CLIENT" | "PROVIDER";
+  onUpdate?: () => void;
 }
 
 export default function AppointmentDetailsModal({
@@ -36,168 +26,153 @@ export default function AppointmentDetailsModal({
   isOpen,
   onClose,
   userType,
+  onUpdate,
 }: AppointmentDetailsModalProps) {
-  if (!appointment) return null
+  if (!appointment) return null;
 
-  const formatPhoneNumberForWhatsApp = (phone: string) => {
+  const personToShow = userType === "CLIENT" ? appointment.provider : appointment.client;
+  const dateObj = new Date(appointment.startTime);
+  const date = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const time = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+
+  const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
+    if (!phone) return "";
     return phone.replace(/\D/g, "");
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "upcoming":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 font-poppins"
-      case "completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 font-poppins"
-      case "cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 font-poppins"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400 font-poppins"
+  const getStatusInfo = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "PENDING": return { text: "Pendente", color: "bg-yellow-100 text-yellow-800" };
+      case "CONFIRMED": return { text: "Confirmado", color: "bg-blue-100 text-blue-800" };
+      case "COMPLETED": return { text: "Concluído", color: "bg-green-100 text-green-800" };
+      case "CANCELLED": case "REJECTED": return { text: "Cancelado", color: "bg-red-100 text-red-800" };
+      default: return { text: status, color: "bg-gray-100 text-gray-800" };
     }
-  }
+  };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "upcoming":
-        return "Agendado"
-      case "completed":
-        return "Concluído"
-      case "cancelled":
-        return "Cancelado"
-      default:
-        return status
+  const handleUpdateStatus = async (newStatus: "COMPLETED" | "CANCELLED") => {
+    const token = Cookies.get('authToken');
+    const endpointMap = {
+      PROVIDER: {
+        COMPLETED: `provider/${appointment.id}/complete`,
+        CANCELLED: `provider/${appointment.id}/cancel`
+      },
+      CLIENT: {
+        COMPLETED: '', // Cliente não pode completar
+        CANCELLED: `client/${appointment.id}/cancel`
+      }
+    };
+    const endpoint = endpointMap[userType][newStatus];
+    if (!endpoint) return;
+
+    const toastMessages = {
+      loading: newStatus === 'COMPLETED' ? "Marcando como concluído..." : "Cancelando agendamento...",
+      success: newStatus === 'COMPLETED' ? "Agendamento concluído!" : "Agendamento cancelado.",
+      error: newStatus === 'COMPLETED' ? "Falha ao concluir." : "Falha ao cancelar."
+    };
+
+    toast.loading(toastMessages.loading);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/${endpoint}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || toastMessages.error);
+      }
+      toast.success(toastMessages.success);
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-4 border-b border-border/50">
+        <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-xl font-semibold text-center">Detalhes do Agendamento</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-foreground">Status</h3>
-            <Badge className={getStatusColor(appointment.status)}>{getStatusText(appointment.status)}</Badge>
+            <Badge className={getStatusInfo(appointment.status).color}>{getStatusInfo(appointment.status).text}</Badge>
           </div>
 
-          <div className="bg-gradient-to-r from-orange-100 to-orange-200 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl p-4 space-y-4">
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-xl p-4 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#ff8340] to-[#ff8340] rounded-full flex items-center justify-center shadow-lg">
-                <User className="w-6 h-6 text-white" />
-              </div>
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={personToShow.avatarUrl} />
+                <AvatarFallback className="bg-primary text-primary-foreground">{personToShow.name.charAt(0)}</AvatarFallback>
+              </Avatar>
               <div className="font-poppins flex-1">
-                <p className="font-semibold text-foreground text-lg">
-                  {userType === "CLIENT" ? appointment.providerName : appointment.clientName}
-                </p>
-                <p className="text-sm text-muted-foreground">{appointment.service}</p>
+                <p className="font-semibold text-foreground text-lg">{personToShow.name}</p>
+                <p className="text-sm text-muted-foreground">{appointment.service.name}</p>
               </div>
             </div>
-
-            {appointment.price && (
-              <div className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-lg backdrop-blur-sm">
-                <span className="text-sm font-medium font-poppins">Valor</span>
-                <div className="text-right">
-                  <span className="font-bold text-[#ff8340] text-lg">{appointment.price}</span>
-                  <p className="text-xs font-medium text-[#ff8340] opacity-80">{appointment.paymentMethod}</p>
-                </div>
+            <div className="flex items-center justify-between p-3 bg-white/60 dark:bg-black/20 rounded-lg backdrop-blur-sm">
+              <span className="text-sm font-medium font-poppins">Valor</span>
+              <div className="text-right">
+                <span className="font-bold text-primary text-lg">R$ {appointment.service.price.toFixed(2)}</span>
+                {appointment.paymentMethod && <p className="text-xs font-medium text-primary/80">{appointment.paymentMethod}</p>}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-poppins">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Calendar className="w-5 h-5 text-[#ff8340]" />
+              <Calendar className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm font-medium">Data</p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(appointment.date).toLocaleDateString("pt-BR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
+                <p className="text-sm text-muted-foreground">{date}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Clock className="w-5 h-5 text-[#ff8340]" />
+              <Clock className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm font-medium">Horário</p>
-                <p className="text-sm text-muted-foreground">{appointment.time}</p>
+                <p className="text-sm text-muted-foreground">{time}</p>
               </div>
             </div>
           </div>
 
-          {/* ✨ SEÇÃO DE CONTATO ATUALIZADA COM LINKS FUNCIONAIS ✨ */}
-          {(appointment.phone || appointment.email || appointment.whatsapp) && (
+          {(personToShow.phone || personToShow.email || personToShow.whatsapp) && (
             <div className="space-y-4 font-poppins">
-              <h4 className="font-bold text-foreground font-sans flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#ff8340]" />
-                Contato
-              </h4>
+              <h4 className="font-semibold text-foreground flex items-center gap-2"><Phone className="w-4 h-4 text-primary" />Contato</h4>
               <div className="space-y-2">
-                {appointment.phone && (
-                  <a href={`tel:${appointment.phone}`} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors group">
-                     <div className="w-8 h-8 flex-shrink-0 bg-muted group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 rounded-full flex items-center justify-center">
-                      <Phone className="w-4 h-4 text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                {personToShow.whatsapp && (
+                  <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(personToShow.whatsapp)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors group">
+                    <div className="w-8 h-8 flex-shrink-0 bg-muted group-hover:bg-green-100 rounded-full flex items-center justify-center">
+                      <WhatsAppIcon className="w-4 h-4 text-muted-foreground group-hover:text-green-600" />
                     </div>
-                    <span className="text-sm text-muted-foreground">{appointment.phone}</span>
-                  </a>
-                )}
-                {appointment.whatsapp && (
-                  <a 
-                    href={`https://wa.me/${formatPhoneNumberForWhatsApp(appointment.whatsapp)}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors group"
-                  >
-                    <div className="w-8 h-8 flex-shrink-0 bg-muted group-hover:bg-green-100 dark:group-hover:bg-green-900/30 rounded-full flex items-center justify-center">
-                      <WhatsAppIcon className="w-4 h-4 text-muted-foreground group-hover:text-green-600 dark:group-hover:text-green-400" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">{appointment.whatsapp}</span>
-                  </a>
-                )}
-                {appointment.email && (
-                  <a href={`mailto:${appointment.email}`} className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-lg transition-colors group">
-                    <div className="w-8 h-8 flex-shrink-0 bg-muted group-hover:bg-red-100 dark:group-hover:bg-red-900/30 rounded-full flex items-center justify-center">
-                      <Mail className="w-4 h-4 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400" />
-                    </div>
-                    <span className="text-sm text-muted-foreground break-all">{appointment.email}</span>
+                    <span className="text-sm text-muted-foreground">{personToShow.whatsapp}</span>
                   </a>
                 )}
               </div>
             </div>
           )}
-          
-          {/* ... O restante do seu código (Localização, Notas, Avaliação, etc.) ... */}
+        </div>
 
-          <div className="space-y-3 font-poppins pt-4 border-t border-border/50">
-            {appointment.status === "upcoming" && (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 bg-transparent"
-                >
-                  Cancelar serviço
-                </Button>
-                <Button className="flex-1 bg-[#FC9056] hover:bg-[#ff8340] text-white shadow-lg">
-                  Concluir serviço
-                </Button>
-              </div>
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Fechar</Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {userType === 'PROVIDER' && appointment.status === 'CONFIRMED' && (
+              <>
+                <Button onClick={() => handleUpdateStatus('CANCELLED')} variant="destructive" className="flex-1"><X className="w-4 h-4 mr-2" /> Cancelar</Button>
+                <Button onClick={() => handleUpdateStatus('COMPLETED')} className="flex-1 bg-green-600 hover:bg-green-700"><Check className="w-4 h-4 mr-2" /> Concluir</Button>
+              </>
             )}
-            {appointment.status === "completed" && userType === "CLIENT" && !appointment.rating && (
-              <Button className="w-full bg-[#FC9056] hover:bg-[#ff8340] text-white shadow-lg">
-                <Star className="w-4 h-4 mr-2" />
-                Avaliar Atendimento
-              </Button>
+            {userType === 'CLIENT' && appointment.status === 'CONFIRMED' && (
+              <Button onClick={() => handleUpdateStatus('CANCELLED')} variant="destructive" className="w-full"><AlertTriangle className="w-4 h-4 mr-2" /> Cancelar Agendamento</Button>
+            )}
+            {appointment.status === "COMPLETED" && userType === "CLIENT" && appointment.canReview && (
+              <Button className="w-full bg-primary hover:bg-primary/90"><Star className="w-4 h-4 mr-2" /> Avaliar Atendimento</Button>
             )}
           </div>
-
-          <Button variant="outline" onClick={onClose} className="w-full bg-transparent font-poppins hover:bg-muted/50">
-            Fechar
-          </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

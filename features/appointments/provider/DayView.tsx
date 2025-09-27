@@ -65,7 +65,7 @@ export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentFor
                   <div className="flex items-start justify-between mb-1 sm:mb-2">
                     <div>
                       <h4 className="font-semibold text-xs sm:text-sm mb-1">{appointment.clientName}</h4>
-                      <p className="text-xs opacity-90 mb-1">{appointment.service}</p>
+                      <p className="text-xs opacity-90 mb-1">{appointment.service.name}</p>
                       <div className="flex items-center gap-2 text-xs opacity-90">
                         <Clock className="w-3 h-3" />
                         <span>{appointment.time} - {appointment.endTime}</span>

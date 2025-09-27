@@ -1,25 +1,38 @@
+import { Service } from "./Service";
+
 export interface Appointment {
-  id: string
-  providerName: string
-  clientName: string
-  clientAvatar?: string;
-  service: string
-  date: string
-  time: string
-  endTime: string
-  status: "upcoming" | "completed" | "cancelled"
-  price: string
-  phone: string
-  email: string
-  notes?: string
-  rating?: number
-  location?: string
-  duration?: string
-  paymentMethod: string
-  rescheduleStatus?: "pending"
-  whatsapp: string
-  newDate?: string
-  newTime?: string
-  canReview: boolean
+  id: string;
+  client: AssociatedUser;
+  provider: AssociatedUser;
+  service: Service;
+
+  startTime: string;
+  endTime: string;   
+
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+  
+
+  notes?: string;
+  rating?: number;       
+  location?: string;
+  paymentMethod?: string;
+  canReview: boolean;
+
+  rescheduleRequest?: {
+    newStartTime: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+  };
+  date: string;     
+  time: string;
 }
+
+export interface AssociatedUser {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+}
+
 

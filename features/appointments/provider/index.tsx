@@ -5,9 +5,9 @@ import CreateAppointmentModal from "@/features/appointments/provider/CreateAppoi
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Calendar, AlertTriangle, Clock } from "lucide-react" // Ícone importado
+import { ChevronLeft, ChevronRight, Calendar, AlertTriangle, Clock } from "lucide-react"
 import Cookies from 'js-cookie'
-import Link from "next/link" // Importe o Link para o botão de ação
+import Link from "next/link"
 
 import type { Appointment } from "@/types/Appointment"
 import { ViewSwitchButtons } from "./ViewSwitchButtons"
@@ -27,21 +27,17 @@ interface props {
     cancelled: boolean;
   };
   appointments: Appointment[];
-  filteredAppointments: Appointment[];
   handleAppointmentCreated: (newAppointment: Appointment) => void;
 }
 
 export default function ProviderCalendar({
   appointments,
-  filteredAppointments,
   handleAppointmentCreated,
 }: props) {
 
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-
-  // Adicionado: um estado para verificar se existem horários de trabalho
   const [hasWorkingHours, setHasWorkingHours] = useState(false);
 
   const [selectedDateForCreate, setSelectedDateForCreate] = useState<Date | null>(null)
@@ -75,7 +71,6 @@ export default function ProviderCalendar({
 
         const availabilityData = await availabilityRes.json();
 
-        // 👇 ALTERAÇÃO: Verifica se retornou algum dado
         if (availabilityData && availabilityData.length > 0) {
           setHasWorkingHours(true);
           const schedule: WeeklySchedule = {};
@@ -85,7 +80,7 @@ export default function ProviderCalendar({
           });
           setWeeklySchedule(schedule);
         } else {
-          setHasWorkingHours(false); // Se não retornou, define como false
+          setHasWorkingHours(false);
         }
       } catch (error: any) {
         setApiError(error.message);
@@ -102,49 +97,56 @@ export default function ProviderCalendar({
     }
   }, [viewMode, selectedDay]);
 
-  // ... (todas as suas outras funções continuam aqui, sem alterações)
   const getWorkingHoursForDate = (date: Date) => {
-    const dayOfWeek = date.getDay()
-    const daySchedule = weeklySchedule[dayOfWeek] || []
-    if (daySchedule.length === 0) return []
-    const workingHours = []
+    const dayOfWeek = date.getDay();
+    const daySchedule = weeklySchedule[dayOfWeek] || [];
+    if (daySchedule.length === 0) return [];
+
+    const workingHours: string[] = [];
     for (const schedule of daySchedule) {
-      const startHour = Number.parseInt(schedule.start.split(":")[0])
-      const endHour = Number.parseInt(schedule.end.split(":")[0])
+      const startHour = parseInt(schedule.start.split(":")[0]);
+      const endHour = parseInt(schedule.end.split(":")[0]);
       for (let hour = startHour; hour < endHour; hour++) {
-        workingHours.push(`${hour.toString().padStart(2, "0")}:00`)
+        workingHours.push(`${String(hour).padStart(2, "0")}:00`);
       }
     }
-    return workingHours
+    return workingHours;
   }
 
   const getAppointmentsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
-    return filteredAppointments.filter((apt) => apt.date === dateStr)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    return appointments.filter((apt) => apt && apt.date === dateStr);
   }
 
   const getAppointmentForHour = (date: Date, hour: string) => {
-    const dayAppointments = getAppointmentsForDate(date)
+    const dayAppointments = getAppointmentsForDate(date);
     return dayAppointments.find((apt) => {
-      const startHour = Number.parseInt(apt.time.split(":")[0])
-      const endHour = Number.parseInt(apt.endTime.split(":")[0])
-      const currentHour = Number.parseInt(hour.split(":")[0])
-      return currentHour >= startHour && currentHour < endHour
-    })
+      // Usa os dados originais para o cálculo
+      const startHour = new Date(apt.startTime).getUTCHours();
+      const endHour = new Date(apt.endTime).getUTCHours();
+      const currentHour = parseInt(hour.split(":")[0]);
+      return currentHour >= startHour && currentHour < endHour;
+    });
   }
 
-  const isFirstHourOfAppointment = (date: Date, hour: string, appointment: any) => {
-    if (!appointment) return false
-    const startHour = Number.parseInt(appointment.time.split(":")[0])
-    const currentHour = Number.parseInt(hour.split(":")[0])
-    return currentHour === startHour
+  const isFirstHourOfAppointment = (date: Date, hour: string, appointment: Appointment | undefined) => {
+    if (!appointment || !appointment.startTime) return false;
+    const startHour = new Date(appointment.startTime).getUTCHours();
+    const currentHour = parseInt(hour.split(":")[0]);
+    return currentHour === startHour;
   }
 
-  const getAppointmentDuration = (appointment: any) => {
-    if (!appointment) return 1
-    const startHour = Number.parseInt(appointment.time.split(":")[0])
-    const endHour = Number.parseInt(appointment.endTime.split(":")[0])
-    return endHour - startHour
+  const getAppointmentDuration = (appointment: Appointment | undefined) => {
+    // Usa os dados originais para o cálculo
+    if (!appointment || !appointment.startTime || !appointment.endTime) return 1;
+    const startHour = new Date(appointment.startTime).getUTCHours();
+    const endHour = new Date(appointment.endTime).getUTCHours();
+    const duration = endHour - startHour;
+    return duration > 0 ? duration : 1;
   }
 
   const getDaysInMonth = (date: Date) => {
@@ -228,18 +230,22 @@ export default function ProviderCalendar({
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "upcoming": return "bg-blue-500 border-blue-600 text-white"
-      case "completed": return "bg-green-500 border-green-600 text-white"
-      case "cancelled": return "bg-red-500 border-red-600 text-white"
-      default: return "bg-gray-500 border-gray-600 text-white"
+    switch (status?.toUpperCase()) {
+      case "CONFIRMED":
+      case "PENDING":
+        return "bg-blue-500 border-blue-600 text-white"
+      case "COMPLETED":
+        return "bg-green-500 border-green-600 text-white"
+      case "CANCELLED":
+      case "REJECTED":
+        return "bg-red-500 border-red-600 text-white"
+      default:
+        return "bg-gray-500 border-gray-600 text-white"
     }
   }
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("pt-BR", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric",
-    })
+    return date.toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
   }
 
   const formatWeekRange = (startDate: Date) => {
@@ -255,11 +261,7 @@ export default function ProviderCalendar({
   const days = getDaysInMonth(currentDate)
   const isToday = (day: number) => {
     const today = new Date();
-    return (
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear()
-    )
+    return (day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear())
   }
 
   const isTodayDate = (date: Date) => {
@@ -300,7 +302,7 @@ export default function ProviderCalendar({
               Para usar o calendário de agendamentos, primeiro você precisa definir seus horários de trabalho semanais.
             </p>
             <Button asChild className="mt-6 bg-[#FC9056] hover:bg-[#ff8340]">
-              <Link href="/dashboard/provider">
+              <Link href="/dashboard/provider/schedules">
                 <Clock className="mr-2 h-4 w-4" />
                 Definir Horários
               </Link>
@@ -314,25 +316,15 @@ export default function ProviderCalendar({
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="truncate">
-                  {viewMode === "month" ? (
-                    <>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</>
-                  ) : viewMode === "week" ? (
-                    selectedWeek && (<span>{formatWeekRange(getWeekDays(selectedWeek)[0])}</span>)
-                  ) : (
-                    selectedDay && <span>{formatDate(selectedDay)}</span>
-                  )}
+                  {viewMode === "month" ? (<>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</>)
+                    : viewMode === "week" ? (selectedWeek && (<span>{formatWeekRange(getWeekDays(selectedWeek)[0])}</span>))
+                      : (selectedDay && <span>{formatDate(selectedDay)}</span>)}
                 </span>
               </CardTitle>
               <div className="flex gap-1 sm:gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleNavigation("prev")}>
-                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleTodayClick} className="text-xs sm:text-sm bg-transparent font-poppins">
-                  Hoje
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleNavigation("next")}>
-                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleNavigation("prev")}><ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" /></Button>
+                <Button variant="outline" size="sm" onClick={handleTodayClick} className="text-xs sm:text-sm bg-transparent font-poppins">Hoje</Button>
+                <Button variant="outline" size="sm" onClick={() => handleNavigation("next")}><ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" /></Button>
               </div>
             </div>
           </CardHeader>
@@ -341,7 +333,23 @@ export default function ProviderCalendar({
               <MonthView currentDate={currentDate} days={days} getAppointmentsForDate={getAppointmentsForDate} getStatusColor={getStatusColor} handleAppointmentClick={handleAppointmentClick} handleDayClick={handleDayClick} isToday={isToday} weekDays={weekDays} />
             ) : viewMode === "week" ? (
               selectedWeek && (
-                <WeekView getAppointmentDuration={getAppointmentDuration} getAppointmentForHour={getAppointmentForHour} getAppointmentsForDate={getAppointmentsForDate} getStatusColor={getStatusColor} getWeekDays={getWeekDays} getWorkingHoursForDate={getWorkingHoursForDate} handleAppointmentClick={handleAppointmentClick} handleCreateAppointment={handleCreateAppointment} handleWeekDayClick={handleWeekDayClick} isFirstHourOfAppointment={isFirstHourOfAppointment} isTodayDate={isTodayDate} monthNames={monthNames} selectedWeek={selectedWeek} weekDays={weekDays} weekDaysFull={weekDaysFull} />
+                <WeekView
+                  // 👇 CORREÇÃO APLICADA AQUI 👇
+                  selectedWeek={selectedWeek}
+                  weekDays={weekDays}
+                  weekDaysFull={weekDaysFull}
+                  monthNames={monthNames}
+                  isTodayDate={isTodayDate}
+                  getWorkingHoursForDate={getWorkingHoursForDate}
+                  getAppointmentsForDate={getAppointmentsForDate} // Passando a prop que faltava
+                  getAppointmentForHour={getAppointmentForHour}
+                  isFirstHourOfAppointment={isFirstHourOfAppointment}
+                  getAppointmentDuration={getAppointmentDuration}
+                  handleAppointmentClick={handleAppointmentClick}
+                  handleWeekDayClick={handleWeekDayClick}
+                  handleCreateAppointment={handleCreateAppointment}
+                  getStatusColor={getStatusColor}
+                />
               )
             ) : (
               selectedDay && (
