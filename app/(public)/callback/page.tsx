@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // 1. Usar os hooks do Next.js
+import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { Loader2 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api'; // 1. Usando a nossa função apiFetch
 
-// Componente para feedback visual
+// --- Componentes de Feedback (sem alterações) ---
 function LoadingState({ message }: { message: string }) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -18,7 +18,6 @@ function LoadingState({ message }: { message: string }) {
     );
 }
 
-// Componente para feedback de erro
 function ErrorState({ message }: { message: string }) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -29,10 +28,10 @@ function ErrorState({ message }: { message: string }) {
 }
 
 export default function AuthCallbackPage() {
-    // 2. Obter os objetos router e searchParams com os hooks
     const router = useRouter();
     const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const handleAuth = async () => {
@@ -41,36 +40,31 @@ export default function AuthCallbackPage() {
 
             if (apiError) {
                 setError("Falha na autenticação com o provedor.");
-                setTimeout(() => router.push('/login'), 3000); // Usar router.push
+                setTimeout(() => router.push('/login'), 3000);
                 return;
             }
 
             if (token) {
+                // Salva o token imediatamente
                 Cookies.set('authToken', token, { expires: 7, path: '/' });
 
                 try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error("Sessão inválida ou token expirado.");
-                    }
-
-                    const data = await response.json();
-
-                    // Sua lógica para encontrar o objeto do usuário permanece a mesma
+                    // 2. Usando apiFetch. Ele já inclui o token no header.
+                    // A verificação de erro 401 (token expirado) é feita DENTRO do apiFetch.
+                    const data = await apiFetch('/api/users/me');
+                    
+                    // Lógica para encontrar o objeto do usuário (sem alterações)
                     let userObject = (data && data.user && typeof data.user.isProfileComplete !== 'undefined')
                         ? data.user
                         : (data && typeof data.isProfileComplete !== 'undefined')
-                            ? data
-                            : null;
-
+                        ? data
+                        : null;
+                    
                     if (!userObject) {
                         throw new Error("A resposta da API não contém os dados do usuário esperados.");
                     }
-
-                    // 3. Usar router.push para uma navegação suave (sem recarregar a página)
+                    
+                    // Redireciona com base no status do perfil
                     if (userObject.isProfileComplete) {
                         const dashboardUrl = userObject.role === 'PROVIDER' ? '/dashboard/provider' : '/dashboard/client';
                         router.push(dashboardUrl);
@@ -79,28 +73,28 @@ export default function AuthCallbackPage() {
                     }
 
                 } catch (err: any) {
+                    // O apiFetch já trata o erro 401. Este catch pegará outros erros.
                     Cookies.remove('authToken');
                     setError(err.message);
                     setTimeout(() => router.push('/login'), 3000);
                 }
             } else {
-                // Se nenhum token for encontrado após um breve momento, redireciona
-                setTimeout(() => {
-                    // Verificação extra para garantir que o token não apareceu enquanto esperávamos
-                    if (!searchParams.get('token')) {
-                        setError("Token de autenticação não encontrado na URL.");
-                        setTimeout(() => router.push('/login'), 3000);
-                    }
-                }, 500);
+                // 3. Lógica simplificada: se não há token, é um erro.
+                setError("Token de autenticação não encontrado na URL.");
+                setTimeout(() => router.push('/login'), 3000);
             }
         };
 
         handleAuth();
-    }, [router, searchParams]); // O efeito depende do router e dos parâmetros da URL
+    // A dependência do searchParams garante que o efeito rode quando os parâmetros da URL estiverem disponíveis
+    }, [router, searchParams]);
 
+    // A verificação de erro agora acontece antes do return
     if (error) {
         return <ErrorState message={error} />;
     }
 
+    // O estado de loading inicial é gerenciado pelo Suspense no componente pai
+    // mas mantemos um aqui para o processo de fetch.
     return <LoadingState message="A autenticar, por favor aguarde..." />;
 }
