@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { Loader2 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
 
+// --- Componentes de Feedback (sem alterações) ---
 function LoadingState({ message }: { message: string }) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
@@ -46,7 +46,21 @@ export default function CallbackClient() {
                 Cookies.set('authToken', token, { expires: 7, path: '/' });
 
                 try {
-                    const userObject = await apiFetch('/api/users/me');
+                    // 👇 CORREÇÃO APLICADA AQUI 👇
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+                        // 1. Adicionar o header de autorização manualmente
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        // Se a resposta não for OK, lança um erro para o bloco CATCH
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Sessão inválida. Status: ${response.status}`);
+                    }
+                    
+                    const userObject = await response.json();
                     
                     if (!userObject) {
                         throw new Error("A resposta da API não contém os dados do usuário esperados.");
