@@ -68,7 +68,7 @@ export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentFor
                       <p className="text-xs opacity-90 mb-1">{appointment.service.name}</p>
                       <div className="flex items-center gap-2 text-xs opacity-90">
                         <Clock className="w-3 h-3" />
-                        <span>{appointment.time} - {appointment.endTime}</span>
+                        <span>{appointment.time}</span>
                       </div>
                     </div>
                     <div className="text-right">

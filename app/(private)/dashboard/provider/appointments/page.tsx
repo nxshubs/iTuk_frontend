@@ -61,11 +61,10 @@ export default function ProviderAppointments() {
         const data = await response.json();
         const formattedData = data.map((apt: any) => {
           const startTime = new Date(apt.startTime);
-          console.log(startTime)
           return {
-              ...apt,
-              date: startTime.toISOString().split('T')[0], 
-              time: startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+            ...apt,
+            date: startTime.toISOString().split('T')[0], 
+            time: startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
           };
         });
 

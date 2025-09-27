@@ -13,7 +13,7 @@ interface WeekViewProps {
   isTodayDate: (date: Date) => boolean;
   getWorkingHoursForDate: (date: Date) => string[];
   // 👇 1. Adiciona o tipo de retorno correto aqui
-  getAppointmentsForDate: (date: Date) => Appointment[]; 
+  getAppointmentsForDate: (date: Date) => Appointment[];
   getAppointmentForHour: (date: Date, hour: string) => Appointment | undefined;
   isFirstHourOfAppointment: (date: Date, hour: string, appointment: Appointment | undefined) => boolean;
   getAppointmentDuration: (appointment: Appointment | undefined) => number;
@@ -23,39 +23,39 @@ interface WeekViewProps {
   getStatusColor: (status: string) => string;
 }
 
-export const WeekView = ({ 
-    selectedWeek, 
-    weekDays, 
-    weekDaysFull, 
-    monthNames, 
-    isTodayDate,
-    getWorkingHoursForDate, 
-    getAppointmentsForDate, // Função agora tem o tipo de retorno
-    getAppointmentForHour,
-    isFirstHourOfAppointment,
-    getAppointmentDuration,
-    handleAppointmentClick,
-    handleWeekDayClick,
-    handleCreateAppointment,
-    getStatusColor
+export const WeekView = ({
+  selectedWeek,
+  weekDays,
+  weekDaysFull,
+  monthNames,
+  isTodayDate,
+  getWorkingHoursForDate,
+  getAppointmentsForDate, // Função agora tem o tipo de retorno
+  getAppointmentForHour,
+  isFirstHourOfAppointment,
+  getAppointmentDuration,
+  handleAppointmentClick,
+  handleWeekDayClick,
+  handleCreateAppointment,
+  getStatusColor
 }: WeekViewProps) => {
 
-    const getWeekDays = (date: Date): Date[] => {
-        const startOfWeek = new Date(date);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-        const week = [];
-        for (let i = 0; i < 7; i++) {
-            const day = new Date(startOfWeek);
-            day.setDate(startOfWeek.getDate() + i);
-            week.push(day);
-        }
-        return week;
-    };
+  const getWeekDays = (date: Date): Date[] => {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      week.push(day);
+    }
+    return week;
+  };
 
-    const weekDaysArray = getWeekDays(selectedWeek);
-    const allWorkingHours = Array.from(new Set(weekDaysArray.flatMap((date) => getWorkingHoursForDate(date)))).sort();
+  const weekDaysArray = getWeekDays(selectedWeek);
+  const allWorkingHours = Array.from(new Set(weekDaysArray.flatMap((date) => getWorkingHoursForDate(date)))).sort();
 
-    return (
+  return (
     <>
       <div className="block sm:hidden">
         <div className="space-y-4">
@@ -81,7 +81,6 @@ export const WeekView = ({
                 </div>
                 {dayAppointments.length > 0 && workingHours.length > 0 && (
                   <div className="p-3 space-y-2 bg-background">
-                    {/* 👇 2. Adiciona o tipo explícito aqui */}
                     {dayAppointments.map((appointment: Appointment) => (
                       <div
                         key={appointment.id}
@@ -145,9 +144,9 @@ export const WeekView = ({
                       <div
                         key={dayIndex}
                         className={cn(
-                            "p-1 border-r last:border-r-0 border-b min-h-[80px] relative",
-                            isCurrentHourAndToday && "bg-blue-50 dark:bg-blue-950",
-                            !isWorkingHour && "bg-muted/30"
+                          "p-1 border-r last:border-r-0 border-b min-h-[80px] relative",
+                          isCurrentHourAndToday && "bg-blue-50 dark:bg-blue-950",
+                          !isWorkingHour && "bg-muted/30"
                         )}
                       >
                         {isWorkingHour ? (
@@ -158,14 +157,13 @@ export const WeekView = ({
                                 "absolute inset-x-1 top-1 p-2 rounded cursor-pointer transition-all hover:shadow-md text-xs z-10",
                                 getStatusColor(appointment.status)
                               )}
-                              style={{ height: `calc(${appointmentDuration * 80}px - 0.5rem)`}}
+                              style={{ height: `calc(${appointmentDuration * 80}px - 0.5rem)` }}
                             >
                               <div className="font-semibold truncate mb-1">{appointment.client.name}</div>
                               <div className="opacity-90 truncate text-xs">{appointment.service.name}</div>
-                              <div className="opacity-90 text-xs mt-1">{appointment.time} - {appointment.endTime}</div>
                             </div>
                           ) : appointment ? (
-                            <div className="h-full"></div> // Slot ocupado
+                            <div className="h-full"></div>
                           ) : (
                             <div className="h-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                               <Button

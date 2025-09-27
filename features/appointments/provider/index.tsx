@@ -35,6 +35,7 @@ export default function ProviderCalendar({
   handleAppointmentCreated,
 }: props) {
 
+
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -125,7 +126,6 @@ export default function ProviderCalendar({
   const getAppointmentForHour = (date: Date, hour: string) => {
     const dayAppointments = getAppointmentsForDate(date);
     return dayAppointments.find((apt) => {
-      // Usa os dados originais para o cálculo
       const startHour = new Date(apt.startTime).getUTCHours();
       const endHour = new Date(apt.endTime).getUTCHours();
       const currentHour = parseInt(hour.split(":")[0]);
@@ -141,7 +141,6 @@ export default function ProviderCalendar({
   }
 
   const getAppointmentDuration = (appointment: Appointment | undefined) => {
-    // Usa os dados originais para o cálculo
     if (!appointment || !appointment.startTime || !appointment.endTime) return 1;
     const startHour = new Date(appointment.startTime).getUTCHours();
     const endHour = new Date(appointment.endTime).getUTCHours();
