@@ -34,7 +34,7 @@ export default function SignupFlow() {
       alert("Por favor, selecione um tipo de conta.");
       return;
     }
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030";
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
     const googleLoginUrl = `${API_BASE_URL}/api/auth/google?role=${selectedType}`;
     window.location.href = googleLoginUrl;
   };
