@@ -118,7 +118,7 @@ export function ScheduleManagement() {
       const newBlockedDay = await response.json();
       if (!response.ok) throw new Error(newBlockedDay.error || "Falha ao bloquear o dia.");
 
-      await fetchData(); // Busca os dados novamente para garantir consistência
+      await fetchData(); 
       setIsBlockDayModalOpen(false);
     } catch (error: any) {
       setApiError(error.message)

@@ -24,7 +24,7 @@ export default function Schedules({ availability }: SchedulesProps) {
             <Clock className="w-5 h-5 text-primary" />
             Horário de Funcionamento
           </div>
-          <Button onClick={() => router.push("/dashboard/provider/schedules")} size="sm" variant="outline">
+          <Button onClick={() => router.push("/dashboard/provider")} size="sm" variant="outline">
             Gerenciar Horários
           </Button>
         </CardTitle>

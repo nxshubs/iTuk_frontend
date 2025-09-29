@@ -9,6 +9,7 @@ import ClientProfileView from "@/features/profile/client/ClientProfileView"
 import Cookies from "js-cookie"
 import { ProfileData } from "@/types/ProfileData"
 import { apiFetch } from "@/lib/api"
+import { toast } from "sonner"
 
 export default function ClientProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -60,6 +61,10 @@ export default function ClientProfilePage() {
     }
   };
 
+  const handleGoogleConnect = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google/connect`;
+  };
+
   // PREENCHIDO: Função para salvar os dados com FormData
   const handleSave = async () => {
     if (!profileData) return;
@@ -104,10 +109,10 @@ export default function ClientProfilePage() {
       setPhotoFile(null);
       setPhotoPreview(null);
 
-      alert("Perfil atualizado com sucesso!");
+      toast.success("Perfil atualizado com sucesso!");
     } catch (error) {
       console.error(error);
-      alert((error as Error).message || "Ocorreu um erro ao salvar as alterações.");
+      toast.error((error as Error).message || "Ocorreu um erro ao salvar as alterações.");
     } finally {
       setIsSaving(false);
     }
@@ -137,7 +142,7 @@ export default function ClientProfilePage() {
               profileData={profileData}
               setProfileData={setProfileData}
               isGoogleConnected={!!profileData.googleId}
-              onGoogleConnect={() => alert("Lógica de conexão com Google aqui")}
+              onGoogleConnect={handleGoogleConnect}
               photoPreview={photoPreview}
               onFileChange={handleFileChange}
             />

@@ -37,11 +37,11 @@ export default function ClientReviewsView({
     <div className="max-w-7xl mx-auto space-y-8">
       <ReviewsHeader />
 
-      <ReviewsStats 
+      {/* <ReviewsStats 
         totalReviews={reviews.length}
         averageRating={averageRating}
         filteredCount={filteredReviews.length}
-      />
+      /> */}
       
       <ReviewsFilters
         filters={filters}

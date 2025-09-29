@@ -301,7 +301,7 @@ export default function ProviderCalendar({
               Para usar o calendário de agendamentos, primeiro você precisa definir seus horários de trabalho semanais.
             </p>
             <Button asChild className="mt-6 bg-[#FC9056] hover:bg-[#ff8340]">
-              <Link href="/dashboard/provider/schedules">
+              <Link href="/dashboard/provider">
                 <Clock className="mr-2 h-4 w-4" />
                 Definir Horários
               </Link>

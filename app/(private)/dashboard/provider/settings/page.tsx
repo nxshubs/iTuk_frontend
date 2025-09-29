@@ -59,6 +59,8 @@ export default function ProviderSettings() {
           })
         ]);
 
+        console.log("subRes", subRes)
+
 
         if (!profileRes.ok || !subRes.ok) {
           throw new Error("Falha ao carregar os dados das configurações.");
@@ -66,7 +68,6 @@ export default function ProviderSettings() {
 
         const profile = await profileRes.json();
         const subscriptionStatus = await subRes.json();
-
         setProfileData(profile);
         setSubscription(subscriptionStatus);
 

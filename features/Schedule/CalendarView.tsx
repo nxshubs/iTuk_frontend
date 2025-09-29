@@ -24,7 +24,7 @@ interface CalendarViewProps {
   appointments: Appointment[]
   onDayClick: (date: Date) => void
   onUnblockDay: (id: string) => void
-  unblockingId: string | null // ID do dia que está a ser desbloqueado
+  unblockingId: string | null 
 }
 
 // --- Constantes ---
@@ -160,7 +160,7 @@ export function CalendarView({
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-400 text-center py-2 font-poppins opacity-0 group-hover:opacity-100">Clique para bloquear</div>
+                      <div className="text-xs text-gray-400 text-center py-2 font-poppins">Clique para bloquear</div>
                     )}
                   </div>
                 </div>
