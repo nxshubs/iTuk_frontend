@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CreditCard, Lock } from "lucide-react"
+import { toast } from "sonner"
 
 export default function SubscriptionForm() {
   const [formData, setFormData] = useState({
@@ -19,7 +20,7 @@ export default function SubscriptionForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Simulate payment processing
-    alert("Pagamento processado com sucesso! Bem-vindo ao Plano Premium!")
+    toast.success("Pagamento processado com sucesso! Bem-vindo ao Plano Premium!")
   }
 
   const formatCardNumber = (value: string) => {

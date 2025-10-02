@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import { Appointment } from "@/types/Appointment"
+import { toast } from "sonner"
 
 interface ReviewModalProps {
   appointment: Appointment | null
@@ -20,7 +21,7 @@ export default function ReviewModal({ appointment, isOpen, onClose }: ReviewModa
 
   const handleSubmit = () => {
     if (rating > 0) {
-      alert(`Avaliação enviada! ${rating} estrelas para ${appointment?.providerName}`)
+      toast.success(`Avaliação enviada! ${rating} estrelas para ${appointment?.providerName}`)
       onClose()
       setRating(0)
       setComment("")

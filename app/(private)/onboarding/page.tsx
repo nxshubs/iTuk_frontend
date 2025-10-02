@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import AuthHeader from '@/components/shared/AuthHeader'
 import { ArrowRight, ArrowLeft, MapPin, Heart, Scissors, Car, Home, Wrench, Camera, Music, BookOpen, Coffee, Dumbbell, Palette, Check, Star, Clock, Users, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Interest {
   id: string
@@ -65,13 +66,13 @@ export default function OnboardingPage() {
           },
           () => {
             setIsLoadingLocation(false)
-            alert('Não foi possível obter sua localização. Digite manualmente.')
+            toast.error('Não foi possível obter sua localização. Digite manualmente.')
           }
         )
       }
     } catch (error) {
       setIsLoadingLocation(false)
-      alert('Erro ao obter localização')
+      toast.error('Erro ao obter localização')
     }
   }
 

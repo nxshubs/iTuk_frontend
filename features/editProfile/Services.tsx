@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Service } from "@/types/Service";
 import { DollarSign, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface Props {
     services: Service[];
@@ -21,7 +22,7 @@ export default function Services({ services, onAddService, onRemoveService, onUp
 
     const handleAddClick = () => {
         if (!newServiceName.trim() || !newServicePrice || !newServiceDuration) {
-            alert("Por favor, preencha nome, preço e duração do novo serviço.");
+            toast.info("Por favor, preencha nome, preço e duração do novo serviço.");
             return;
         }
         onAddService({

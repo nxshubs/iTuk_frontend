@@ -30,7 +30,6 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo Section - Now using an image */}
           <Link href="/" className="flex items-center">
             <img
               src="logotipo.png"
@@ -56,9 +55,6 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="font-poppins text-muted-foreground hover:text-foreground transition-colors">
-              Recursos
-            </a>
             <a href="#how-it-works" className="font-poppins text-muted-foreground hover:text-foreground transition-colors">
               Como Funciona
             </a>

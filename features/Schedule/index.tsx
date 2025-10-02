@@ -11,6 +11,7 @@ import { BulkBlockModal } from "./Modal/BulkBlockModal"
 import Cookies from 'js-cookie'
 import { BlockDaysSkeleton } from "@/components/skeletons/BlockDaysSkeleton"
 import { apiFetch } from "@/lib/api"
+import { toast } from "sonner"
 
 // --- Tipos de Dados ---
 interface Availability {
@@ -183,7 +184,7 @@ export function ScheduleManagement() {
         const result = await response.json();
         throw new Error(result.error || "Falha ao salvar horários.");
       }
-      alert("Horários salvos com sucesso!");
+      toast.success("Horários salvos com sucesso!");
     } catch (error: any) {
       setApiError(error.message);
     } finally {

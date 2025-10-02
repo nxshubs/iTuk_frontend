@@ -12,6 +12,7 @@ import DashboardHeader from "@/components/shared/DashboardHeader";
 import { Shield, Palette, Crown, Users } from "lucide-react";
 import { ProviderSettingsSkeleton } from "@/components/skeletons/ProviderSettingsSkeleton";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 interface UserProfile {
   name: string;
@@ -110,7 +111,7 @@ export default function ProviderSettings() {
         throw new Error(result.error || "Falha ao salvar as configurações.");
       }
 
-      alert("Configurações salvas com sucesso!");
+      toast.success("Configurações salvas com sucesso!");
 
     } catch (error: any) {
       setApiError(error.message);
@@ -131,7 +132,7 @@ export default function ProviderSettings() {
         window.location.href = data.url;
       }
     } catch (error) {
-      alert("Erro ao acessar o portal de assinaturas.");
+      toast.error("Erro ao acessar o portal de assinaturas.");
     }
   };
 
@@ -147,7 +148,7 @@ export default function ProviderSettings() {
         localStorage.removeItem('user');
         router.push('/login');
       } catch (error) {
-        alert("Erro ao excluir a conta.");
+        toast.error("Erro ao excluir a conta.");
       }
     }
   };

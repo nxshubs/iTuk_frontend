@@ -11,6 +11,7 @@ import { ProviderStep2 } from "./signUpForms/provider/ProviderStep2";
 import { ProviderStep3 } from "./signUpForms/provider/ProviderStep3";
 import { ProviderStep4 } from "./signUpForms/provider/ProviderStep4";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 
 export function ProviderSignUp({ onBackToSelection }: { onBackToSelection: () => void }) {
@@ -201,7 +202,7 @@ export function ProviderSignUp({ onBackToSelection }: { onBackToSelection: () =>
 
       localStorage.setItem('emailForVerification', payload.email);
 
-      alert("Conta de prestador criada com sucesso! Redirecionando para verificação de e-mail...");
+      toast.success("Conta de prestador criada com sucesso! Redirecionando para verificação de e-mail...");
       window.location.href = "/verify-email";
 
     } catch (error: any) {

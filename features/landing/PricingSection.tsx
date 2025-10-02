@@ -2,19 +2,18 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Check, X, Star, BarChart2, Image as ImageIcon } from "lucide-react"
+import { Check, X, Image as ImageIcon } from "lucide-react"
 
 export default function PricingSection() {
   return (
     <section className="py-20 bg-muted/30" id="pricing">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Escolha o plano ideal para você</h2>
-          <p className="text-xl text-muted-foreground font-poppins">Comece gratuitamente ou desbloqueie recursos premium para impulsionar seu negócio</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Planos para profissionais!</h2>
+          <p className="text-xl text-muted-foreground font-poppins">Você é um provedor de serviço? comece gratuitamente ou desbloqueie recursos premium para impulsionar seu negócio</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Plano Gratuito */}
           <div className="bg-card rounded-lg shadow-lg p-8 border border-border flex flex-col">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-foreground mb-2">Plano Gratuito</h3>

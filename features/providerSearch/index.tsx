@@ -13,6 +13,7 @@ import NoResults from "./NoResults"
 import Cookies from 'js-cookie'
 import { Provider } from "@/types/Provider"
 import { apiFetch } from "@/lib/api"
+import { toast } from "sonner"
 
 export interface Filters {
     specialty: string;
@@ -95,7 +96,7 @@ export default function ProviderSearch() {
     };
 
     const handleBookingSuccess = () => {
-        alert("Agendamento solicitado com sucesso!");
+        toast.success("Agendamento solicitado com sucesso!");
     };
 
     const handleProviderClick = (providerId: string) => {
@@ -122,7 +123,7 @@ export default function ProviderSearch() {
         e.stopPropagation();
         const token = Cookies.get('authToken');
         if (!token) {
-            alert("Você precisa estar logado para favoritar.");
+            toast.error("Você precisa estar logado para favoritar.");
             return;
         }
 
@@ -149,7 +150,7 @@ export default function ProviderSearch() {
             }
         } catch (error) {
             console.error(error);
-            alert((error as Error).message);
+            toast.error((error as Error).message);
         } finally {
             setFavoritingInProgress(prev => {
                 const newSet = new Set(prev);

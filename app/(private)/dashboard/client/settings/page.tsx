@@ -13,6 +13,7 @@ import { ProfileData } from "@/types/ProfileData"
 import SettingsHeader from "@/features/settings/SettingsHeader"
 import { apiFetch } from "@/lib/api"
 import { SettingsPageSkeleton } from "@/components/skeletons/SettingsPageSkeleton"
+import { toast } from "sonner"
 
 export default function ClientSettingsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -110,11 +111,11 @@ export default function ClientSettingsPage() {
       const { user, token: newToken } = await response.json();
       Cookies.set('authToken', newToken, { expires: 1 });
       setProfileData(user);
-      alert("Parabéns! Você agora é um prestador de serviços.");
+      toast.success("Parabéns! Você agora é um prestador de serviços.");
       setIsProviderModalOpen(false);
       setCurrentStep(1);
     } catch (error) {
-      alert((error as Error).message);
+      toast.error((error as Error).message);
     } finally {
       setIsSubmitting(false);
     }

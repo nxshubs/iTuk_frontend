@@ -9,8 +9,8 @@ export default function Footer() {
             <div className="md:w-128 md:h-32 flex md:flex-row flex-col">
               <img src="/logotipo_2.png" className="w-full object-cover hidden md:flex" alt="" />
               <p className="text-gray-300 mb-4 font-poppins">
-              A plataforma que conecta clientes aos melhores prestadores de serviços. Agendamento fácil, avaliações
-              confiáveis e pagamento seguro.
+              A plataforma que conecta clientes aos melhores prestadores de serviços.
+              100% gratuita para clientes, com agendamento fácil e avaliações confiáveis.
             </p>
             </div>
           </div>

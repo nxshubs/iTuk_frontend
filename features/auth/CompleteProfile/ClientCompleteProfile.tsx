@@ -10,6 +10,7 @@ import { Check, Loader2 } from "lucide-react";
 import { ClientStep2 } from "@/features/auth/signUpForms/client/ClientStep2";
 import { CompleteProfileSkeleton } from "@/components/skeletons/CompleteProfileSkeleton";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 interface UserProfile {
   name: string;
@@ -175,7 +176,7 @@ export function ClientCompleteProfile() {
         Cookies.set('authToken', result.token, { expires: 1, path: '/' });
       }
 
-      alert("Perfil completado com sucesso! Redirecionando para o dashboard...");
+      toast.success("Perfil completado com sucesso! Redirecionando para o dashboard...");
       window.location.href = "/dashboard/client";
 
     } catch (error: any) {

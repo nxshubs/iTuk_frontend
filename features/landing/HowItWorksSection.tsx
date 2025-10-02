@@ -27,12 +27,12 @@ export default function HowItWorksSection() {
       icon: Search,
       title: "Encontre o Profissional",
       description:
-        "Busque por categoria, localização ou avaliações. Nossa IA recomenda os melhores profissionais para você.",
+        "Busque por categoria, localização ou avaliações. e encontre os melhores profissionais para você.",
     },
     {
       icon: Calendar,
       title: "Agende o Serviço",
-      description: "Escolha data e horário disponíveis. Receba confirmação instantânea e lembretes automáticos.",
+      description: "Escolha data e horário disponíveis. Receba confirmação do agendamento.",
     },
     {
       icon: CheckCircle,
@@ -57,7 +57,7 @@ export default function HowItWorksSection() {
               </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto font-poppins">
-              Em apenas 3 passos simples, você conecta com os melhores profissionais
+              Em apenas 3 passos simples, você conecta com os melhores profissionais de forma 100% gratuita.
             </p>
           </div>
         </div>

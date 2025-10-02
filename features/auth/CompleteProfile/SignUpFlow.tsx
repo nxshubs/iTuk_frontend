@@ -7,6 +7,7 @@ import { ProviderSignUp } from "../ProviderSignUp";
 import { ClientCompleteProfile } from "./ClientCompleteProfile";
 import { ProviderCompleteProfile } from "./ProviderCompleteProfile";
 import { UserTypeSelectionCompleteProfile } from "./UserTypeSelectionCompleteProfile";
+import { toast } from "sonner";
 
 export default function SignupFlow() {
   const [flowStep, setFlowStep] = useState<'selection' | 'client-form' | 'provider-form'>('selection');
@@ -31,7 +32,7 @@ export default function SignupFlow() {
 
   const handleGoogleLogin = () => {
     if (!selectedType) {
-      alert("Por favor, selecione um tipo de conta.");
+      toast.info("Por favor, selecione um tipo de conta.");
       return;
     }
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;

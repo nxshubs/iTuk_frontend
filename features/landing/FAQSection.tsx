@@ -27,7 +27,7 @@ export default function FAQSection() {
     {
       question: "Como funciona o sistema de pagamento?",
       answer:
-        "O pagamento é processado de forma segura através da plataforma. Você só paga após a confirmação do serviço, e oferecemos garantia de reembolso em caso de problemas.",
+        "O pagamento dos serviços não é realizado dentro da plataforma. Ele ocorre diretamente entre cliente e prestador, utilizando os métodos de pagamento que o profissional disponibilizar em seu perfil. A plataforma funciona apenas como um meio de agendamento e avaliação, sem intermediação financeira.",
     },
     {
       question: "Como são verificados os profissionais?",
@@ -38,11 +38,6 @@ export default function FAQSection() {
       question: "Posso cancelar um agendamento?",
       answer:
         "Sim, você pode cancelar até 24 horas antes do horário agendado sem custos. Cancelamentos de última hora podem ter taxas aplicadas.",
-    },
-    {
-      question: "O que acontece se eu não ficar satisfeito?",
-      answer:
-        "Oferecemos garantia de satisfação. Se não ficar satisfeito, entre em contato conosco e resolveremos a situação, incluindo reembolso quando necessário.",
     },
     {
       question: "Como me torno um prestador na plataforma?",

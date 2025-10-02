@@ -8,6 +8,7 @@ import { ArrowRight, ArrowLeft, Check, RefreshCw } from "lucide-react";
 import { ClientStep1 } from "./signUpForms/client/ClientStep1";
 import { ClientStep2 } from "./signUpForms/client/ClientStep2";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 export function ClientSignUp({ onBackToSelection }: { onBackToSelection: () => void }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -177,7 +178,7 @@ export function ClientSignUp({ onBackToSelection }: { onBackToSelection: () => v
 
       localStorage.setItem('emailForVerification', payload.email);
 
-      alert("Conta criada com sucesso! Um e-mail de verificação foi enviado.");
+      toast.success("Conta criada com sucesso! Um e-mail de verificação foi enviado.");
       window.location.href = "/verify-email";
 
     } catch (error: any) {

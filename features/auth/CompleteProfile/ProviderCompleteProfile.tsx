@@ -12,6 +12,7 @@ import { ProviderStep3 } from "@/features/auth/signUpForms/provider/ProviderStep
 import { ProviderStep4 } from "@/features/auth/signUpForms/provider/ProviderStep4";
 import { CompleteProfileSkeleton } from "@/components/skeletons/CompleteProfileSkeleton"; // 👈 Importe o Skeleton
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 interface UserProfile {
     name: string;
@@ -281,7 +282,7 @@ export function ProviderCompleteProfile() {
                 Cookies.set('authToken', result.token, { expires: 1, path: '/' });
             }
 
-            alert("Perfil completado com sucesso!");
+            toast.success("Perfil completado com sucesso!");
             window.location.href = "/dashboard/provider";
 
         } catch (error: any) {
