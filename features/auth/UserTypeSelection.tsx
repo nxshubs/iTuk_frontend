@@ -7,13 +7,13 @@ export const UserTypeSelection = ({ onSelectType, onContinueWithEmail, selectedT
     handleGoogleLogin: () => void;
 }) => {
     return (
-        <div className="border bg-card text-card-foreground shadow-sm rounded-lg p-8">
+        <div className="border text-card-foreground shadow-sm rounded-lg bg-white p-8 mx-12">
             <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-foreground mb-2">Criar uma conta</h3>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Criar uma conta</h2>
                 <p className="text-muted-foreground">Para começar, diga-nos quem você é.</p>
             </div>
             <div className="space-y-4">
-                <div onClick={() => onSelectType("CLIENT")} className={`cursor-pointer p-6 rounded-lg border-2 border-dashed transition-all ${selectedType === 'CLIENT' ? 'border-orange-500 bg-orange-500/10' : 'border-gray-300 hover:border-orange-400'}`}>
+                <div onClick={() => onSelectType("CLIENT")} className={`cursor-pointer p-6 rounded-lg border-2 transition-all ${selectedType === 'CLIENT' ? 'border-orange-500 bg-orange-500/10' : 'border-gray-300 hover:border-orange-400'}`}>
                     <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center"><UserIcon className="w-6 h-6 text-orange-500" /></div>
                         <div>
@@ -22,7 +22,7 @@ export const UserTypeSelection = ({ onSelectType, onContinueWithEmail, selectedT
                         </div>
                     </div>
                 </div>
-                <div onClick={() => onSelectType("PROVIDER")} className={`cursor-pointer p-6 rounded-lg border-2 border-dashed transition-all ${selectedType === 'PROVIDER' ? 'border-orange-500 bg-orange-500/10' : 'border-gray-300 hover:border-orange-400'}`}>
+                <div onClick={() => onSelectType("PROVIDER")} className={`cursor-pointer p-6 rounded-lg border-2 transition-all ${selectedType === 'PROVIDER' ? 'border-orange-500 bg-orange-500/10' : 'border-gray-300 hover:border-orange-400'}`}>
                     <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center"><Briefcase className="w-6 h-6 text-orange-500" /></div>
                         <div>

@@ -29,7 +29,6 @@ export default function SignUpForm() {
     setSelectedType(null); // Reseta a seleção
   };
 
-  // A lógica do Google Login agora vive no componente pai
   const handleGoogleLogin = () => {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
     const googleLoginUrl = `${API_BASE_URL}/api/auth/google`;
@@ -56,7 +55,7 @@ export default function SignUpForm() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto py-8">
+    <div className="w-full max-w-2xl mx-auto py-8 ">
       {renderContent()}
       <div className="text-center text-sm mt-6">
         <span className="text-muted-foreground">Já tem uma conta? </span>

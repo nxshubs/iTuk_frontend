@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import Cookies from 'js-cookie';
 import { apiFetch } from "@/lib/api"
+import Link from "next/link"
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -149,6 +150,12 @@ export function LoginForm() {
             Continuar com Google
           </Button>
         </div>
+        <p className="mt-6 text-center text-sm text-muted-foreground font-poppins">
+          Ou{" "}
+          <Link href="/signup" className="font-medium text-[#FC9056] hover:text-[#ff3a20] font-poppins">
+            crie uma nova conta
+          </Link>
+        </p>
       </CardContent>
     </Card>
   )

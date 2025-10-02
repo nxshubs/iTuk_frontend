@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, ArrowLeft, Check, RefreshCw } from "lucide-react";
 import { ClientStep1 } from "./signUpForms/client/ClientStep1";
 import { ClientStep2 } from "./signUpForms/client/ClientStep2";
-import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
 export function ClientSignUp({ onBackToSelection }: { onBackToSelection: () => void }) {
@@ -152,8 +151,6 @@ export function ClientSignUp({ onBackToSelection }: { onBackToSelection: () => v
     try {
       let photoUrl = "https://placehold.co/150x150/orange/white?text=User";
       if (formData.profilePhoto) {
-        // Lógica de upload da foto aqui, se necessário.
-        // Por enquanto, usaremos o placeholder.
       }
 
       const payload = {
