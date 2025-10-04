@@ -5,10 +5,10 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/shared/theme-provider"
 import { Toaster } from "@/components/ui/sonner" // 1. Importar o Toaster
-import { UserProvider } from "@/hooks/useUser"     // 2. Importar o UserProvider
+import { UserProvider } from "@/hooks/useUser"     
 
 export const metadata: Metadata = {
-  title: "Tuk - Conectando você aos melhores profissionais",
+  title: "iTuk - Conectando você aos melhores profissionais",
   description:
     "A plataforma que revoluciona a forma como você encontra e contrata serviços. Agendamento fácil, avaliações confiáveis, pagamento seguro.",
   icons: {
