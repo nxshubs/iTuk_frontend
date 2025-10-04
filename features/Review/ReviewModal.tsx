@@ -21,7 +21,7 @@ export default function ReviewModal({ appointment, isOpen, onClose }: ReviewModa
 
   const handleSubmit = () => {
     if (rating > 0) {
-      toast.success(`Avaliação enviada! ${rating} estrelas para ${appointment?.providerName}`)
+      toast.success(`Avaliação enviada! ${rating} estrelas para ${appointment?.provider.name}`)
       onClose()
       setRating(0)
       setComment("")
@@ -39,8 +39,8 @@ export default function ReviewModal({ appointment, isOpen, onClose }: ReviewModa
 
         <div className="space-y-6 font-poppins">
           <div className="p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-bold font-sans">{appointment.providerName}</h3>
-            <p className="text-sm text-gray-600">{appointment.service}</p>
+            <h3 className="font-bold font-sans">{appointment.provider.name}</h3>
+            <p className="text-sm text-gray-600">{appointment.service.name}</p>
             <p className="text-sm text-gray-500">
               {new Date(appointment.date).toLocaleDateString("pt-BR")} às {appointment.time}
             </p>

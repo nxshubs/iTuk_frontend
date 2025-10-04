@@ -46,7 +46,7 @@ export function WeeklyView({ weeklySchedule, updateWeeklySchedule, onSave, isSav
                 </CardTitle>
                 <p className="text-sm text-gray-600 font-poppins mt-1">Configure seus horários padrão para cada dia da semana.</p>
             </div>
-            <Button onClick={onSave} disabled={isSaving} className="hidden sm:inline-flex">
+            <Button onClick={onSave} disabled={isSaving} className="hidden sm:inline-flex bg-[#fc9056] hover:bg-[#ff8340]">
                 <SaveButtonContent />
             </Button>
         </div>
@@ -126,7 +126,7 @@ export function WeeklyView({ weeklySchedule, updateWeeklySchedule, onSave, isSav
         })}
       </CardContent>
       <CardFooter className="sm:hidden">
-          <Button onClick={onSave} disabled={isSaving} className="w-full">
+          <Button onClick={onSave} disabled={isSaving} className="w-full bg-[#fc9056] hover:bg-[#ff8340]">
               <SaveButtonContent />
           </Button>
       </CardFooter>

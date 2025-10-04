@@ -31,7 +31,6 @@ export default function ProviderReviews() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Adicionado para garantir que o skeleton seja visível e evitar "pisca-pisca"
     const minLoadingPromise = new Promise(resolve => setTimeout(resolve, 1000));
 
     const fetchReviews = async () => {
@@ -54,7 +53,6 @@ export default function ProviderReviews() {
       } catch (error: any) {
         setApiError(error.message);
       } finally {
-        // Espera pelo tempo mínimo antes de remover o skeleton
         await minLoadingPromise;
         setIsLoading(false);
       }
@@ -67,12 +65,10 @@ export default function ProviderReviews() {
 
   const filteredReviews = filter === "all" ? reviews : reviews.filter((r) => r.rating === Number.parseInt(filter));
 
-  // 👇 A VERIFICAÇÃO DE CARREGAMENTO AGORA ACONTECE AQUI, NO TOPO!
   if (isLoading) {
     return <ProviderReviewsSkeleton />;
   }
 
-  // O RETORNO PRINCIPAL SÓ ACONTECE DEPOIS QUE O CARREGAMENTO TERMINA
   return (
     <div className="min-h-screen bg-muted/30">
       <SidebarMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
@@ -82,14 +78,14 @@ export default function ProviderReviews() {
         />
         <main className="p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-8">
-            <div className="animate-slide-in-from-bottom">
+            <div>
               <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">Minhas Avaliações</h1>
               <p className="text-muted-foreground text-lg font-poppins">Veja o que seus clientes estão dizendo sobre você</p>
             </div>
 
             {apiError ? (
               apiError.includes("premium") ? (
-                <PremiumAlert /> 
+                <PremiumAlert />
               ) : (
                 <Card>
                   <CardContent className="p-6 text-center text-red-500">
@@ -103,7 +99,6 @@ export default function ProviderReviews() {
                 <ReviewList reviews={filteredReviews} />
               </>
             )}
-            
           </div>
         </main>
       </div>

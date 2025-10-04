@@ -63,7 +63,7 @@ export default function ProviderAppointments() {
           const startTime = new Date(apt.startTime);
           return {
             ...apt,
-            date: startTime.toISOString().split('T')[0], 
+            date: startTime.toISOString().split('T')[0],
             time: startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
           };
         });
@@ -130,114 +130,112 @@ export default function ProviderAppointments() {
   const now = new Date();
   const currentMonthString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  if (isLoading) {
-    return <CalendarSkeleton />
-  }
-
-  if (apiError) {
-    return <div className="text-red-500 p-4">Error: {apiError}</div>;
-  }
-
   return (
     <div className="min-h-screen bg-muted/30">
       <SidebarMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <div className="md:ml-64">
         <DashboardHeader onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="p-2 sm:p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-foreground mb-2">
-                  Calendário de Agendamentos
-                </h1>
-                <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
-                  Visualize e gerencie todos os seus agendamentos
-                </p>
+          {isLoading ? (
+            <></>
+          ) : apiError ? (
+            <div className="text-red-500 p-4 text-center">Erro: {apiError}</div>
+          ) : (
+            <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-foreground mb-2">
+                    Calendário de Agendamentos
+                  </h1>
+                  <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
+                    Visualize e gerencie todos os seus agendamentos
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter Bar */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={openFilterModal} className="flex items-center gap-2 bg-transparent">
+                    <Filter className="w-4 h-4" />
+                    Filtros
+                    {getActiveFiltersCount() < 3 && (<Badge variant="secondary" className="ml-1">{getActiveFiltersCount()}</Badge>)}
+                  </Button>
+                  {/* Active Filters Badges */}
+                  {!appliedStatusFilters.upcoming && (<Badge variant="outline" className="flex items-center gap-1">Agendados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("upcoming")} /></Badge>)}
+                  {!appliedStatusFilters.completed && (<Badge variant="outline" className="flex items-center gap-1">Concluídos ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("completed")} /></Badge>)}
+                  {!appliedStatusFilters.cancelled && (<Badge variant="outline" className="flex items-center gap-1">Cancelados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("cancelled")} /></Badge>)}
+                  {getActiveFiltersCount() < 3 && (<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs">Limpar filtros</Button>)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {filteredAppointments.length} de {appointments.length} agendamentos
+                </div>
+              </div>
+
+              <ProviderCalendar
+                appointments={appointments}
+                handleAppointmentCreated={handleAppointmentCreated}
+                appliedStatusFilters={appliedStatusFilters}
+              />
+
+              {/* Statistics */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+                <Card>
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Este Mês</p>
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
+                          {appointments.filter((apt) => apt && apt.date && apt.date.startsWith(currentMonthString)).length}
+                        </p>
+                      </div>
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-[#FC9056]" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Agendados</p>
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
+                          {appointments.filter(apt => apt && apt.status && ['CONFIRMED', 'PENDING'].includes(apt.status.toUpperCase())).length}
+                        </p>
+                      </div>
+                      <Clock className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Concluídos</p>
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">
+                          {appointments.filter(apt => apt && apt.status && apt.status.toUpperCase() === 'COMPLETED').length}
+                        </p>
+                      </div>
+                      <User className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-muted-foreground">Cancelados</p>
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
+                          {appointments.filter(apt => apt && apt.status && ['CANCELLED', 'REJECTED'].includes(apt.status.toUpperCase())).length}
+                        </p>
+                      </div>
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-red-600" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-
-            {/* Filter Bar */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={openFilterModal} className="flex items-center gap-2 bg-transparent">
-                  <Filter className="w-4 h-4" />
-                  Filtros
-                  {getActiveFiltersCount() < 3 && (<Badge variant="secondary" className="ml-1">{getActiveFiltersCount()}</Badge>)}
-                </Button>
-                {/* Active Filters Badges */}
-                {!appliedStatusFilters.upcoming && (<Badge variant="outline" className="flex items-center gap-1">Agendados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("upcoming")} /></Badge>)}
-                {!appliedStatusFilters.completed && (<Badge variant="outline" className="flex items-center gap-1">Concluídos ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("completed")} /></Badge>)}
-                {!appliedStatusFilters.cancelled && (<Badge variant="outline" className="flex items-center gap-1">Cancelados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("cancelled")} /></Badge>)}
-                {getActiveFiltersCount() < 3 && (<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs">Limpar filtros</Button>)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Mostrando {filteredAppointments.length} de {appointments.length} agendamentos
-              </div>
-            </div>
-
-            <ProviderCalendar
-              appointments={appointments}
-              handleAppointmentCreated={handleAppointmentCreated}
-              appliedStatusFilters={appliedStatusFilters}
-            />
-
-            {/* Statistics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
-              <Card>
-                <CardContent className="p-3 sm:p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Este Mês</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-                        {appointments.filter((apt) => apt && apt.date && apt.date.startsWith(currentMonthString)).length}
-                      </p>
-                    </div>
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-[#FC9056]" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3 sm:p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Agendados</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-                        {appointments.filter(apt => apt && apt.status && ['CONFIRMED', 'PENDING'].includes(apt.status.toUpperCase())).length}
-                      </p>
-                    </div>
-                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3 sm:p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Concluídos</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">
-                        {appointments.filter(apt => apt && apt.status && apt.status.toUpperCase() === 'COMPLETED').length}
-                      </p>
-                    </div>
-                    <User className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3 sm:p-4 lg:p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Cancelados</p>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-                        {appointments.filter(apt => apt && apt.status && ['CANCELLED', 'REJECTED'].includes(apt.status.toUpperCase())).length}
-                      </p>
-                    </div>
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-red-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          )}
         </main>
       </div>
       <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>

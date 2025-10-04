@@ -40,30 +40,25 @@ interface Appointment {
 // --- Componente Principal ---
 export function ScheduleManagement() {
   // Estado da UI
-  const [viewMode, setViewMode] = useState<"calendar" | "weekly">("calendar")
+  const [viewMode, setViewMode] = useState<"calendar" | "weekly">("weekly")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null)
-
-  // Estado dos Dados
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>([])
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({})
-  const [appointments, setAppointments] = useState<Appointment[]>([]) // TODO: Ligar à API
+  const [appointments, setAppointments] = useState<Appointment[]>([]) 
 
-  // Estado dos Modais
   const [isBlockDayModalOpen, setIsBlockDayModalOpen] = useState(false)
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false)
   const [isBulkBlockModalOpen, setIsBulkBlockModalOpen] = useState(false)
 
-  // Estado de Dados Temporários para os Modais
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [conflictAppointments, setConflictAppointments] = useState<Appointment[]>([])
   const [bulkStartDate, setBulkStartDate] = useState<string>("")
   const [bulkEndDate, setBulkEndDate] = useState<string>("")
   const [bulkReason, setBulkReason] = useState<string>("")
 
-  // --- Funções de API ---
   const fetchData = async () => {
     setIsLoading(true)
     setApiError(null)
@@ -216,13 +211,13 @@ export function ScheduleManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex gap-2 font-poppins">
-          <Button variant={viewMode === "calendar" ? "default" : "outline"} onClick={() => setViewMode("calendar")} size="sm">
-            <Calendar className="w-4 h-4 mr-2" />
-            Calendário
-          </Button>
           <Button variant={viewMode === "weekly" ? "default" : "outline"} onClick={() => setViewMode("weekly")} size="sm">
             <Clock className="w-4 h-4 mr-2" />
             Semanal
+          </Button>
+          <Button variant={viewMode === "calendar" ? "default" : "outline"} onClick={() => setViewMode("calendar")} size="sm">
+            <Calendar className="w-4 h-4 mr-2" />
+            Calendário
           </Button>
         </div>
         {viewMode === "calendar" && (

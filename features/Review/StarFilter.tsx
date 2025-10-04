@@ -11,7 +11,7 @@ interface ReviewFilterProps {
 
 export default function StarFilter({ filter, setFilter }: ReviewFilterProps) {
   return (
-    <div className="animate-slide-in-from-bottom animation-delay-300">
+    <div>
       <Card>
         <CardContent className="p-6 font-poppins">
           <div className="flex flex-wrap items-center gap-4">

@@ -7,7 +7,7 @@ import { Star } from "lucide-react";
 interface Review {
   id: string;
   clientName: string;
-  clientPhotoUrl: string | null; 
+  clientPhotoUrl: string | null;
   rating: number;
   comment: string | null;
   date: string;
@@ -21,14 +21,13 @@ interface ReviewListProps {
 
 export default function ReviewList({ reviews }: ReviewListProps) {
   return (
-    <div className="space-y-6 animate-slide-in-from-bottom animation-delay-400">
+    <div className="space-y-6">
       {reviews.length > 0 ? (
         reviews.map((review) => (
           <Card key={review.id} className="hover:shadow-lg transition-all duration-300 group">
             <CardContent className="p-6">
               <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div className="flex items-center gap-4">
-                  {/* CORREÇÃO: Lógica do Avatar */}
                   {review.clientPhotoUrl ? (
                     <img src={review.clientPhotoUrl} alt={review.clientName} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
                   ) : (
@@ -72,12 +71,11 @@ export default function ReviewList({ reviews }: ReviewListProps) {
         ))
       ) : (
         <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-                <p>Nenhuma avaliação encontrada para este filtro.</p>
-            </CardContent>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <p>Nenhuma avaliação encontrada para este filtro.</p>
+          </CardContent>
         </Card>
       )}
     </div>
   );
 }
-
