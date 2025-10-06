@@ -12,8 +12,8 @@ import FilterModal from "./FilterModal"
 import NoResults from "./NoResults"
 import Cookies from 'js-cookie'
 import { Provider } from "@/types/Provider"
-import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
+import { ProviderCardSkeleton } from "@/components/skeletons/ProviderCardSkeleton"
 
 export interface Filters {
     specialty: string;
@@ -37,23 +37,26 @@ export default function ProviderSearch() {
     const [tempFilters, setTempFilters] = useState<Filters>({ specialty: "", nearMe: false, topRated: false, serviceType: "", showFavoritesOnly: false });
     const [appliedFilters, setAppliedFilters] = useState<Filters>({ specialty: "", nearMe: false, topRated: false, serviceType: "", showFavoritesOnly: false });
 
-    // CORREÇÃO: Novo estado para rastrear o carregamento do favorito
     const [favoritingInProgress, setFavoritingInProgress] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const fetchProviders = async () => {
+            console.log("[ProviderSearch] 1. Iniciando busca de prestadores...");
             setIsLoading(true);
             setApiError(null);
             const token = Cookies.get('authToken');
             if (!token) {
                 setApiError("Sessão inválida. Por favor, faça login novamente.");
                 setIsLoading(false);
+                console.error("[ProviderSearch] ERRO: Token de autenticação não encontrado.");
                 return;
             }
             const params = new URLSearchParams();
             if (searchTerm) params.append('search', searchTerm);
             if (appliedFilters.specialty) params.append('specialty', appliedFilters.specialty);
             if (appliedFilters.topRated) params.append('topRated', 'true');
+
+            console.log(`[ProviderSearch] 2. Buscando com parâmetros: ${params.toString()}`);
 
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/provider?${params.toString()}`, {
@@ -64,23 +67,22 @@ export default function ProviderSearch() {
                     throw new Error(errorData.error || "Falha ao buscar prestadores.");
                 }
                 const data: Provider[] = await response.json();
+                console.log("[ProviderSearch] 3. Dados brutos recebidos da API:", data);
                 setProviders(data);
                 const initialFavorites = new Set(data.filter(p => p.isFavorite).map(p => p.id));
-                console.log("initialFavorites", initialFavorites)
-                console.log("data", data)
+                console.log("[ProviderSearch] 4. Favoritos iniciais definidos:", initialFavorites);
                 setFavorites(initialFavorites);
             } catch (error: any) {
+                console.error("[ProviderSearch] ERRO FATAL ao buscar prestadores:", error);
                 setApiError(error.message);
             } finally {
+                console.log("[ProviderSearch] 5. Busca de prestadores finalizada.");
                 setIsLoading(false);
             }
         };
 
-        const debounceTimer = setTimeout(() => {
-            fetchProviders();
-        }, 500);
+        fetchProviders();
 
-        return () => clearTimeout(debounceTimer);
     }, [searchTerm, appliedFilters]);
 
     const specialties = [...new Set(providers.map(p => p.specialty).filter(Boolean) as string[])];
@@ -91,6 +93,7 @@ export default function ProviderSearch() {
 
     const handleBookService = (provider: Provider, e: React.MouseEvent) => {
         e.stopPropagation();
+        console.log("[ProviderSearch] Abrindo modal de agendamento para o prestador:", provider);
         setSelectedProvider(provider);
         setIsBookingModalOpen(true);
     };
@@ -121,24 +124,31 @@ export default function ProviderSearch() {
 
     const handleFavoriteClick = async (providerId: string, e: React.MouseEvent) => {
         e.stopPropagation();
+        console.log(`[ProviderSearch] A. Botão de favorito clicado para o provider ID: ${providerId}`);
         const token = Cookies.get('authToken');
         if (!token) {
             toast.error("Você precisa estar logado para favoritar.");
+            console.warn("[ProviderSearch] ERRO: Tentativa de favoritar sem token.");
             return;
         }
 
         const originalFavorites = new Set(favorites);
-
         setFavoritingInProgress(prev => new Set(prev).add(providerId));
-
+        
         setFavorites(prev => {
             const newFavs = new Set(prev);
-            if (newFavs.has(providerId)) newFavs.delete(providerId);
-            else newFavs.add(providerId);
+            if (newFavs.has(providerId)) {
+                newFavs.delete(providerId);
+                console.log(`[ProviderSearch] B. (Otimista) Removendo favorito do estado: ${providerId}`);
+            } else {
+                newFavs.add(providerId);
+                console.log(`[ProviderSearch] B. (Otimista) Adicionando favorito ao estado: ${providerId}`);
+            }
             return newFavs;
         });
 
         try {
+            console.log(`[ProviderSearch] C. Enviando requisição para API /api/favorites/toggle para o provider ID: ${providerId}`);
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/favorites/toggle`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -146,10 +156,12 @@ export default function ProviderSearch() {
             });
             if (!response.ok) {
                 setFavorites(originalFavorites);
+                console.error(`[ProviderSearch] ERRO na API de favoritar. Revertendo para o estado original. Provider ID: ${providerId}`);
                 throw new Error("Falha ao atualizar favorito.");
             }
+            console.log(`[ProviderSearch] D. Sucesso na API de favoritar para o provider ID: ${providerId}`);
         } catch (error) {
-            console.error(error);
+            console.error("[ProviderSearch] ERRO FATAL no bloco catch do handleFavoriteClick:", error);
             toast.error((error as Error).message);
         } finally {
             setFavoritingInProgress(prev => {
@@ -157,6 +169,7 @@ export default function ProviderSearch() {
                 newSet.delete(providerId);
                 return newSet;
             });
+            console.log(`[ProviderSearch] E. Finalizado processo de favoritar para o provider ID: ${providerId}`);
         }
     };
 
@@ -197,7 +210,11 @@ export default function ProviderSearch() {
             </Dialog>
 
             {isLoading ? (
-                <div className="text-center py-12">Carregando prestadores...</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                        <ProviderCardSkeleton key={index} />
+                    ))}
+                </div>
             ) : apiError ? (
                 <div className="text-center py-12 text-red-500">Erro ao buscar prestadores: {apiError}</div>
             ) : (
@@ -208,7 +225,6 @@ export default function ProviderSearch() {
                                 key={provider.id}
                                 provider={provider}
                                 isFavorite={favorites.has(provider.id)}
-                                // CORREÇÃO: Passa o estado de carregamento como prop
                                 isFavoriting={favoritingInProgress.has(provider.id)}
                                 onFavoriteClick={handleFavoriteClick}
                                 onBookService={handleBookService}
@@ -229,3 +245,4 @@ export default function ProviderSearch() {
         </div>
     )
 }
+

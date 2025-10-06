@@ -10,7 +10,7 @@ import WhatsAppIcon from "../../components/ui/whatsapp"
 interface ProviderCardProps {
     provider: Provider
     isFavorite: boolean
-    isFavoriting: boolean // CORREÇÃO: Nova prop para o estado de carregamento
+    isFavoriting: boolean 
     onFavoriteClick: (providerId: string, e: React.MouseEvent) => void
     onBookService: (provider: Provider, e: React.MouseEvent) => void
     onCardClick: (providerId: string) => void

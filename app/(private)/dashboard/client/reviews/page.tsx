@@ -6,8 +6,7 @@ import { useState, useEffect, useMemo } from "react"
 import ClientReviewsView from "@/features/Review/client/ClientReviewsView"
 import { Review } from "@/types/Review"
 import Cookies from "js-cookie"
-import { Loader2 } from "lucide-react"
-import { apiFetch } from "@/lib/api"
+import { ClientReviewsSkeleton } from "@/components/skeletons/ClientReviewsSkeleton"
 
 export default function ClientReviewsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -38,8 +37,6 @@ export default function ClientReviewsPage() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/review/client/my-reviews`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        console.log(response)
 
         if (!response.ok) {
           throw new Error("Falha ao carregar suas avaliações.");
@@ -87,18 +84,6 @@ export default function ClientReviewsPage() {
     setSpecialtyFilter("all");
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-[#FC9056]" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
-  }
-
   return (
     <div className="min-h-screen bg-muted/30">
       <SidebarMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
@@ -107,15 +92,24 @@ export default function ClientReviewsPage() {
           onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
         <main className="p-6 lg:p-8">
-          <ClientReviewsView
-            reviews={reviews}
-            filteredReviews={filteredReviews}
-            averageRating={averageRating}
-            uniqueSpecialties={uniqueSpecialties}
-            filters={{ ratingFilter, dateFilter, specialtyFilter }}
-            setFilters={{ setRatingFilter, setDateFilter, setSpecialtyFilter }}
-            clearFilters={clearFilters}
-          />
+          {isLoading ? (
+            <ClientReviewsSkeleton />
+          ) : error ? (
+            <div className="text-center text-red-500">{error}</div>
+          ) : (
+            // Removidas as classes de animação do wrapper
+            <div>
+              <ClientReviewsView
+                reviews={reviews}
+                filteredReviews={filteredReviews}
+                averageRating={averageRating}
+                uniqueSpecialties={uniqueSpecialties}
+                filters={{ ratingFilter, dateFilter, specialtyFilter }}
+                setFilters={{ setRatingFilter, setDateFilter, setSpecialtyFilter }}
+                clearFilters={clearFilters}
+              />
+            </div>
+          )}
         </main>
       </div>
     </div>

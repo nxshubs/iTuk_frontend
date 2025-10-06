@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Appointment } from "@/types/Appointment"
 import Cookies from "js-cookie"
-import { Loader2 } from "lucide-react"
 
 // Modais
 import ReviewModal from "../../Review/ReviewModal"
@@ -15,7 +14,7 @@ import CalendarHeader from "./CalendarHeader"
 import MonthView from "./MonthView"
 import WeekView from "./WeekView"
 import DayView from "./DayView"
-import { apiFetch } from "@/lib/api"
+import { ClientCalendarSkeleton } from "@/components/skeletons/ClientCalendarSkeleton"
 
 type ViewMode = "month" | "week" | "day"
 
@@ -91,7 +90,6 @@ export default function ClientAppointments() {
   };
 
   const handleRescheduleSubmit = (appointmentId: string, newDate: string, newTime: string): void => {
-    // Lógica para enviar reagendamento para a API
     alert("Funcionalidade de reagendamento a ser implementada.");
     setIsRescheduleModalOpen(false);
   };
@@ -110,54 +108,61 @@ export default function ClientAppointments() {
     return appointments.filter((apt) => apt.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-48"><Loader2 className="w-8 h-8 animate-spin text-[#FC9056]" /></div>;
-  }
-  if (error) {
-    return <div className="text-center text-red-500 p-4">{error}</div>;
-  }
+  const renderContent = () => {
+    if (isLoading) {
+      return <ClientCalendarSkeleton />;
+    }
 
-  return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <CalendarHeader
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        currentDate={currentDate}
-        setCurrentDate={setCurrentDate}
-        navigateDate={navigateDate}
-      />
+    if (error) {
+      return <div className="text-center text-red-500 p-4">{error}</div>;
+    }
 
-      {viewMode === "month" && (
-        <MonthView
+    return (
+      <div className="space-y-6">
+        <CalendarHeader
+          viewMode={viewMode}
+          setViewMode={setViewMode}
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
-          setViewMode={setViewMode}
-          getAppointmentsForDate={getAppointmentsForDate}
-          onViewDetails={handleViewDetails}
+          navigateDate={navigateDate}
         />
-      )}
-      {viewMode === "week" && (
-        <WeekView
-          currentDate={currentDate}
-          getAppointmentsForDate={getAppointmentsForDate}
-          onViewDetails={handleViewDetails}
-          handlePhoneClick={handlePhoneClick}
-          handleWhatsAppClick={handleWhatsAppClick}
-        />
-      )}
-      {viewMode === "day" && (
-        <DayView
-          currentDate={currentDate}
-          getAppointmentsForDate={getAppointmentsForDate}
-          onViewDetails={handleViewDetails}
-          onReview={handleReview}
-        />
-      )}
+        {viewMode === "month" && (
+          <MonthView
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            setViewMode={setViewMode}
+            getAppointmentsForDate={getAppointmentsForDate}
+            onViewDetails={handleViewDetails}
+          />
+        )}
+        {viewMode === "week" && (
+          <WeekView
+            currentDate={currentDate}
+            getAppointmentsForDate={getAppointmentsForDate}
+            onViewDetails={handleViewDetails}
+            handlePhoneClick={handlePhoneClick}
+            handleWhatsAppClick={handleWhatsAppClick}
+          />
+        )}
+        {viewMode === "day" && (
+          <DayView
+            currentDate={currentDate}
+            getAppointmentsForDate={getAppointmentsForDate}
+            onViewDetails={handleViewDetails}
+            onReview={handleReview}
+          />
+        )}
+      </div>
+    );
+  };
 
-      {/* Modais */}
+  return (
+    <div>
+      {renderContent()}
       <ReviewModal appointment={selectedAppointment} isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} />
       <ClientAppointmentDetailsModal appointment={selectedAppointment} isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} onRescheduleClick={handleOpenRescheduleModal} />
       <RescheduleModal appointment={selectedAppointment} isOpen={isRescheduleModalOpen} onClose={() => setIsRescheduleModalOpen(false)} onSubmit={handleRescheduleSubmit} />
     </div>
   )
 }
+
