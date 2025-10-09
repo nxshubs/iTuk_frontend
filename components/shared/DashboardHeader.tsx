@@ -137,7 +137,7 @@ export default function DashboardHeader({ onMobileMenuToggle }: DashboardHeaderP
                   <span>Configurações</span>
                 </Link>
               </DropdownMenuItem>
-              {user?.role === 'PROVIDER' && (
+              {/* {user?.role === 'PROVIDER' && (
                 <DropdownMenuItem onClick={handleSwitchRole} disabled={isSwitching} className="cursor-pointer">
                   <Repeat className="mr-2 h-4 w-4" />
                   <span>
@@ -147,7 +147,7 @@ export default function DashboardHeader({ onMobileMenuToggle }: DashboardHeaderP
                     }
                   </span>
                 </DropdownMenuItem>
-              )}
+              )} */}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />

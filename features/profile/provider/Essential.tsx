@@ -15,7 +15,7 @@ export function Essential({ profileData }: Props) {
     const handleWhatsApp = () => {
         if (!profileData?.whatsapp) return;
         const message = encodeURIComponent(
-            `Olá ${profileData.name}! Vi seu perfil na Tuka e gostaria de conversar sobre seus serviços.`,
+            `Olá ${profileData.name}! Vi seu perfil no iTuk e gostaria de conversar sobre seus serviços.`,
         )
         window.open(`https://wa.me/${profileData.whatsapp.replace(/\D/g, "")}?text=${message}`, "_blank")
     }

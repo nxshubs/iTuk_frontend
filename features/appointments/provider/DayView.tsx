@@ -3,19 +3,38 @@
 import { Button } from "@/components/ui/button";
 import WhatsAppIcon from "@/components/ui/whatsapp";
 import { Clock, MapPin, Phone, Plus, Calendar } from "lucide-react";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import { Appointment } from "@/types/Appointment";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 export interface DayViewProps {
-  selectedDay: Date;
+  selectedDay: Date; 
   getWorkingHoursForDate: (date: Date) => string[];
-  getAppointmentForHour: (date: Date, hour: string) => any | undefined;
+  getAppointmentForHour: (date: Date, hour: string) => Appointment | undefined;
   isTodayDate: (date: Date) => boolean;
   getStatusColor: (status: string) => string;
-  handleAppointmentClick: (appointment: any) => void;
+  handleAppointmentClick: (appointment: Appointment) => void;
   handleCreateAppointment: (date: Date, hour: string) => void;
-  getAppointmentsForDate: (date: Date) => any[];
+  getAppointmentsForDate: (date: Date) => Appointment[];
+  providerTimeZone: string; 
 }
 
-export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentForHour, isTodayDate, getStatusColor, handleAppointmentClick, handleCreateAppointment, getAppointmentsForDate }: DayViewProps) => {
+export const DayView = ({ 
+    selectedDay, 
+    getWorkingHoursForDate, 
+    getAppointmentForHour, 
+    isTodayDate, 
+    getStatusColor, 
+    handleAppointmentClick, 
+    handleCreateAppointment, 
+    getAppointmentsForDate,
+    providerTimeZone // <-- RECEBENDO A NOVA PROP
+}: DayViewProps) => {
   const workingHours = getWorkingHoursForDate(selectedDay);
   const dayAppointments = getAppointmentsForDate(selectedDay);
 
@@ -32,6 +51,12 @@ export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentFor
     );
   }
 
+  // Helper para formatar números de telefone para WhatsApp
+  const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
+    if (!phone) return "";
+    return phone.replace(/\D/g, "");
+  };
+
   // Caso 2 e 3: Sempre renderiza a tabela de horários.
   // Se não houver agendamentos, exibe uma mensagem no topo.
   return (
@@ -45,7 +70,9 @@ export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentFor
 
       {workingHours.map((hour) => {
         const appointment = getAppointmentForHour(selectedDay, hour);
-        const isCurrentHour = new Date().getHours() === Number.parseInt(hour.split(":")[0]) && isTodayDate(selectedDay);
+        // --- MUDANÇA: Usa dayjs para verificar a hora atual no fuso horário do provedor ---
+        const isCurrentHour = dayjs().tz(providerTimeZone).hour() === Number.parseInt(hour.split(":")[0]) && isTodayDate(selectedDay);
+        
         return (
           <div
             key={hour}
@@ -58,36 +85,45 @@ export const DayView = ({ selectedDay, getWorkingHoursForDate, getAppointmentFor
             </div>
             <div className="p-2 sm:p-3 relative">
               {appointment ? (
+                // --- MUDANÇA: Formata as horas do agendamento para o fuso horário do provedor ---
                 <div
                   onClick={() => handleAppointmentClick(appointment)}
                   className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-all hover:shadow-md ${getStatusColor(appointment.status)}`}
                 >
                   <div className="flex items-start justify-between mb-1 sm:mb-2">
                     <div>
-                      <h4 className="font-semibold text-xs sm:text-sm mb-1">{appointment.clientName}</h4>
+                      <h4 className="font-semibold text-xs sm:text-sm mb-1">{appointment.client.name}</h4>
                       <p className="text-xs opacity-90 mb-1">{appointment.service.name}</p>
                       <div className="flex items-center gap-2 text-xs opacity-90">
                         <Clock className="w-3 h-3" />
-                        <span>{appointment.time}</span>
+                        <span>{dayjs.utc(appointment.startTime).tz(providerTimeZone).format('HH:mm')} - {dayjs.utc(appointment.endTime).tz(providerTimeZone).format('HH:mm')}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-semibold">{appointment.price}</div>
-                      <div>{appointment.paymentMethod}</div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="group border-gray-300 text-gray-500 hover:border-orange-500 hover:bg-orange-500/10 transition-colors bg-transparent m-0 h-8 w-8">
-                          <Phone className="w-4 h-4 text-white" />
-                        </Button>
-                        <Button variant="outline" size="sm" className="group border-gray-300 text-gray-500 hover:border-green-500 hover:bg-green-500/10 transition-colors bg-transparent m-0 h-8 w-8">
-                          <WhatsAppIcon className="w-4 h-4 text-white" />
-                        </Button>
+                      <div className="text-xs font-semibold">{appointment.service.price}</div>
+                      <div className="text-xs text-muted-foreground">{appointment.paymentMethod}</div>
+                      <div className="flex gap-2 mt-2 justify-end">
+                        {appointment.client.phone && (
+                          <a href={`tel:${formatPhoneNumberForWhatsApp(appointment.client.phone)}`} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="icon" className="group border-gray-300 text-gray-500 hover:border-orange-500 hover:bg-orange-500/10 transition-colors bg-transparent h-8 w-8 p-0">
+                              <Phone className="w-4 h-4 text-gray-500 group-hover:text-orange-500" />
+                            </Button>
+                          </a>
+                        )}
+                        {appointment.client.whatsapp && (
+                          <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(appointment.client.whatsapp)}`} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="icon" className="group border-gray-300 text-gray-500 hover:border-green-500 hover:bg-green-500/10 transition-colors bg-transparent h-8 w-8 p-0">
+                              <WhatsAppIcon className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
+                            </Button>
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
                   {appointment.location && (
-                    <div className="flex items-center gap-1 text-xs opacity-90">
+                    <div className="flex items-center gap-1 text-xs opacity-90 mt-2">
                       <MapPin className="w-3 h-3" />
-                      <span className="truncate mr">{appointment.location}</span>
+                      <span className="truncate">{appointment.location}</span>
                     </div>
                   )}
                 </div>

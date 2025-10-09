@@ -8,10 +8,11 @@ interface MonthViewProps {
   handleDayClick: (day: number) => void;
   getStatusColor: (status: string) => string;
   handleAppointmentClick: (appointment: any) => void;
+  providerTimeZone: string;
 }
 
 
-export const MonthView = ({ currentDate, days, weekDays, isToday, getAppointmentsForDate, handleDayClick, getStatusColor, handleAppointmentClick }: MonthViewProps) => (
+export const MonthView = ({ currentDate, days, weekDays, isToday, getAppointmentsForDate, handleDayClick, getStatusColor, handleAppointmentClick, providerTimeZone }: MonthViewProps) => (
   <>
     <div className="grid grid-cols-7 gap-1 mb-2 sm:mb-4">
       {weekDays.map((day) => (
@@ -32,17 +33,20 @@ export const MonthView = ({ currentDate, days, weekDays, isToday, getAppointment
           <div
             key={index}
             onClick={() => day && handleDayClick(day)}
-            className={`min-h-[60px] sm:min-h-[80px] lg:min-h-[100px] p-1 sm:p-2 border rounded-lg cursor-pointer transition-colors ${day
-              ? `bg-background hover:bg-muted/50 ${isToday(day) ? "ring-2 ring-[#FC9056] bg-[#FC9056]/5" : ""
-              }`
-              : "bg-muted/20"
-              }`}
+            className={`min-h-[60px] sm:min-h-[80px] lg:min-h-[100px] p-1 sm:p-2 border rounded-lg cursor-pointer transition-colors ${
+              day
+                ? `bg-background hover:bg-muted/50 ${
+                    isToday(day) ? "ring-2 ring-[#FC9056] bg-[#FC9056]/5" : ""
+                  }`
+                : "bg-muted/20"
+            }`}
           >
             {day && (
               <>
                 <div
-                  className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${isToday(day) ? "text-[#FC9056] font-bold" : "text-foreground"
-                    }`}
+                  className={`text-xs sm:text-sm font-medium mb-1 sm:mb-2 ${
+                    isToday(day) ? "text-[#FC9056] font-bold" : "text-foreground"
+                  }`}
                 >
                   {day}
                 </div>

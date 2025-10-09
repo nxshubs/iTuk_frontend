@@ -78,7 +78,6 @@ export default function ClientSettingsPage() {
       durationInMinutes: 60
     }];
 
-    // Adiciona todos os campos ao FormData
     formData.append('fullName', providerData.fullName);
     formData.append('cpf', providerData.cpf);
     formData.append('birthDate', providerData.birthDate);

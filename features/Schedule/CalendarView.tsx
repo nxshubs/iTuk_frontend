@@ -1,9 +1,20 @@
+// src/components/CalendarView.tsx
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, ChevronLeft, ChevronRight, Ban, AlertTriangle, Loader2 } from "lucide-react"
 import { useState } from "react"
+
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+// Configurar dayjs com os plugins de UTC e fuso horário
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// ----------------------------------------------------------------
 
 // --- Tipos de Dados ---
 interface BlockedDay {
@@ -25,6 +36,7 @@ interface CalendarViewProps {
   onDayClick: (date: Date) => void
   onUnblockDay: (id: string) => void
   unblockingId: string | null 
+  providerTimeZone: string; // <-- NOVA PROP
 }
 
 // --- Constantes ---
@@ -38,25 +50,31 @@ export function CalendarView({
   onDayClick,
   onUnblockDay,
   unblockingId,
+  providerTimeZone, // <-- RECEBENDO A NOVA PROP
 }: CalendarViewProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(dayjs().tz(providerTimeZone).toDate()) // <-- MUDANÇA: Inicializa com dayjs no fuso horário do provedor
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate((prev) => {
-      const newDate = new Date(prev)
-      newDate.setDate(1);
-      newDate.setMonth(direction === "prev" ? prev.getMonth() - 1 : prev.getMonth() + 1)
-      return newDate
+      // Cria uma nova instância de dayjs no fuso horário do provedor para manipulação
+      const prevDayjs = dayjs(prev).tz(providerTimeZone);
+      const newDayjs = direction === "prev" ? prevDayjs.subtract(1, 'month') : prevDayjs.add(1, 'month');
+      return newDayjs.toDate(); // Retorna o objeto Date
     })
   }
 
   const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
+    // Usa dayjs para manipular a data, garantindo que o fuso horário seja respeitado
+    const dayjsDate = dayjs(date).tz(providerTimeZone);
+    const year = dayjsDate.year();
+    const month = dayjsDate.month(); // month() é zero-indexado em dayjs e Date
+    
+    // Obtém o primeiro e último dia do mês no fuso horário do provedor
+    const firstDay = dayjsDate.startOf('month');
+    const lastDay = dayjsDate.endOf('month');
+
+    const daysInMonth = lastDay.date(); // dia do mês (ex: 31)
+    const startingDayOfWeek = firstDay.day(); // dia da semana (0 para domingo, 1 para segunda, etc.)
 
     const days: (number | null)[] = []
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -69,7 +87,8 @@ export function CalendarView({
   }
 
   const days = getDaysInMonth(currentDate)
-  const today = new Date()
+  // --- MUDANÇA: 'today' também deve ser no fuso horário do provedor para comparações consistentes ---
+  const todayDayjs = dayjs().tz(providerTimeZone); 
 
   return (
     <Card>
@@ -83,7 +102,12 @@ export function CalendarView({
             <Button variant="outline" size="sm" onClick={() => navigateMonth("prev")}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button className="font-poppins bg-transparent" variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+            <Button 
+              className="font-poppins bg-transparent" 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentDate(dayjs().tz(providerTimeZone).toDate())} // <-- MUDANÇA: Volta para a data de hoje no fuso horário do provedor
+            >
               Hoje
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigateMonth("next")}>
@@ -109,19 +133,23 @@ export function CalendarView({
               return <div key={index} className="min-h-[110px] p-2 bg-muted/20 rounded-lg"></div>
             }
 
-            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-            const dateStr = date.toISOString().split("T")[0]
+            // --- MUDANÇA: Cria a data do dia usando dayjs no fuso horário do provedor ---
+            const dateDayjs = dayjs().tz(providerTimeZone).year(currentDate.getFullYear()).month(currentDate.getMonth()).date(day);
+            const date = dateDayjs.toDate(); // Retorna para Date object se onDayClick esperar Date
+            const dateStr = dateDayjs.format("YYYY-MM-DD"); // Formato de string para comparação
+
             const dayAppointments = appointments.filter(apt => apt.date === dateStr);
             const blockedDayInfo = blockedDays.find(b => b.date === dateStr);
             const isBlocked = !!blockedDayInfo;
             const isUnblocking = unblockingId === blockedDayInfo?.id;
-            const isToday = date.toDateString() === today.toDateString();
+            // --- MUDANÇA: Comparações de 'hoje' usando dayjs ---
+            const isToday = dateDayjs.isSame(todayDayjs, 'day'); 
 
             const handleClick = () => {
               if (isBlocked && blockedDayInfo) {
                 onUnblockDay(blockedDayInfo.id);
               } else {
-                onDayClick(date);
+                onDayClick(date); // onDayClick ainda espera um objeto Date
               }
             };
 

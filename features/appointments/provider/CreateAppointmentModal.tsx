@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, Clock, User, MapPin, DollarSign, FileText, CreditCard } from "lucide-react"
+import dayjs from "dayjs"
 
 interface CreateAppointmentModalProps {
   isOpen: boolean
@@ -16,6 +17,7 @@ interface CreateAppointmentModalProps {
   selectedDate: Date | null
   selectedTime: string | null
   onCreateAppointment: (appointment: any) => void
+  providerTimeZone: string; // <-- NOVA PROP
 }
 
 export default function CreateAppointmentModal({
@@ -24,6 +26,7 @@ export default function CreateAppointmentModal({
   selectedDate,
   selectedTime,
   onCreateAppointment,
+  providerTimeZone, // <-- RECEBENDO A NOVA PROP
 }: CreateAppointmentModalProps) {
   const [formData, setFormData] = useState({
     clientName: "",
@@ -68,15 +71,15 @@ export default function CreateAppointmentModal({
   ]
 
   useEffect(() => {
-    if (selectedTime && formData.duration) {
-      const [hours, minutes] = selectedTime.split(":").map(Number)
-      const durationMinutes = Number.parseInt(formData.duration)
-      const endMinutes = hours * 60 + minutes + durationMinutes
-      const endHours = Math.floor(endMinutes / 60)
-      const endMins = endMinutes % 60
-      setEndTime(`${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}`)
+    if (selectedDate && selectedTime && formData.duration) {
+      // --- MUDANÇA: Calcular a hora de término usando dayjs no fuso horário do provedor ---
+      const startDateTime = dayjs(selectedDate).tz(providerTimeZone).hour(parseInt(selectedTime.split(":")[0])).minute(parseInt(selectedTime.split(":")[1]));
+      const durationMinutes = Number.parseInt(formData.duration);
+      const endDateTime = startDateTime.add(durationMinutes, 'minute');
+      setEndTime(endDateTime.format("HH:mm"));
+      // ------------------------------------------------------------------------------------
     }
-  }, [selectedTime, formData.duration])
+  }, [selectedDate, selectedTime, formData.duration, providerTimeZone]) // <-- Adiciona providerTimeZone à dependência
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -106,7 +109,9 @@ export default function CreateAppointmentModal({
       id: Date.now().toString(),
       clientName: formData.clientName,
       service: services.find((s) => s.value === formData.service)?.label || formData.service,
-      date: selectedDate?.toISOString().split("T")[0] || "",
+      // --- MUDANÇA: Usar dayjs para formatar a data para o backend ---
+      date: selectedDate ? dayjs(selectedDate).tz(providerTimeZone).format('YYYY-MM-DD') : "",
+      // ----------------------------------------------------------------
       time: selectedTime || "",
       endTime: endTime,
       status: "upcoming" as const,
@@ -142,12 +147,9 @@ export default function CreateAppointmentModal({
   }
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("pt-BR", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
+    // --- MUDANÇA: Formata a data usando dayjs no fuso horário do provedor ---
+    return dayjs(date).tz(providerTimeZone).format("dddd, D [de] MMMM [de] YYYY")
+    // ------------------------------------------------------------------------
   }
 
   return (

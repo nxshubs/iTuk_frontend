@@ -21,6 +21,7 @@ interface WeekViewProps {
   handleWeekDayClick: (date: Date) => void;
   handleCreateAppointment: (date: Date, hour: string) => void;
   getStatusColor: (status: string) => string;
+  providerTimeZone: string; // <-- NOVA PROP
 }
 
 export const WeekView = ({
@@ -37,7 +38,8 @@ export const WeekView = ({
   handleAppointmentClick,
   handleWeekDayClick,
   handleCreateAppointment,
-  getStatusColor
+  getStatusColor,
+  providerTimeZone // <-- RECEBENDO A NOVA PROP
 }: WeekViewProps) => {
 
   const getWeekDays = (date: Date): Date[] => {

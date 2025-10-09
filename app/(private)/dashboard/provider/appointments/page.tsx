@@ -1,3 +1,4 @@
+// src/app/dashboard/provider/appointments/page.tsx
 "use client"
 
 import SidebarMenu from "@/components/shared/SidebarMenu"
@@ -9,16 +10,26 @@ import { Calendar, Clock, User, Filter, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import ProviderCalendar from "@/features/appointments/provider"
+import ProviderCalendar from "@/features/appointments/provider" // O componente que iremos ajustar
 import type { Appointment } from "@/types/Appointment"
 import Cookies from 'js-cookie'
-import { CalendarSkeleton } from "@/components/skeletons/CalendarSkeleton"
+// CalendarSkeleton não é mais necessário aqui, pois o ProviderCalendar irá lidar com isso
+
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// ----------------------------------------------------------------
 
 export default function ProviderAppointments() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Estado de loading para a busca de appointments
+  const [apiError, setApiError] = useState<string | null>(null); // Estado de erro para a busca de appointments
+  const [providerTimeZone, setProviderTimeZone] = useState<string>("America/Sao_Paulo"); // <-- NOVA PROP: Default para São Paulo
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [tempStatusFilters, setTempStatusFilters] = useState({
@@ -31,6 +42,34 @@ export default function ProviderAppointments() {
     completed: true,
     cancelled: true,
   })
+
+  useEffect(() => {
+  const fetchProviderProfile = async () => {
+    const token = Cookies.get('authToken');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.timeZone) {
+          setProviderTimeZone(data.timeZone);
+        }
+      } else {
+        console.error(`Failed to fetch provider profile for timezone. Status: ${response.status}, Status Text: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({})); 
+        console.error("Error data from API:", errorData);
+      }
+    } catch (error) {
+      console.error("Error fetching provider profile:", error);
+    }
+  };
+
+  fetchProviderProfile();
+}, []); // Executa uma vez no carregamento
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -60,11 +99,12 @@ export default function ProviderAppointments() {
 
         const data = await response.json();
         const formattedData = data.map((apt: any) => {
-          const startTime = new Date(apt.startTime);
+          // --- MUDANÇA: Usar dayjs para parsear e formatar startTime no fuso horário do provedor ---
+          const startTimeDayjs = dayjs.utc(apt.startTime).tz(providerTimeZone);
           return {
             ...apt,
-            date: startTime.toISOString().split('T')[0],
-            time: startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+            date: startTimeDayjs.format('YYYY-MM-DD'), // data no fuso horário do provedor
+            time: startTimeDayjs.format('HH:mm')      // hora no fuso horário do provedor
           };
         });
 
@@ -75,11 +115,21 @@ export default function ProviderAppointments() {
         setIsLoading(false);
       }
     };
-    fetchAppointments();
-  }, [appliedStatusFilters]);
+    // Garante que o fuso horário já foi carregado antes de buscar agendamentos
+    if (providerTimeZone) {
+        fetchAppointments();
+    }
+  }, [appliedStatusFilters, providerTimeZone]); // <-- Dependência adicionada: providerTimeZone
 
   const handleAppointmentCreated = (newAppointment: Appointment) => {
-    setAppointments((prev) => [...prev, newAppointment])
+    // Ao criar um novo agendamento, re-formate-o se necessário e adicione-o
+    const startTimeDayjs = dayjs.utc(newAppointment.startTime).tz(providerTimeZone);
+    const formattedNewAppointment = {
+        ...newAppointment,
+        date: startTimeDayjs.format('YYYY-MM-DD'),
+        time: startTimeDayjs.format('HH:mm')
+    };
+    setAppointments((prev) => [...prev, formattedNewAppointment]);
   }
 
   const filteredAppointments = appointments.filter((appointment) => {
@@ -127,8 +177,8 @@ export default function ProviderAppointments() {
     setIsFilterModalOpen(true)
   }
 
-  const now = new Date();
-  const currentMonthString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  // --- MUDANÇA: Calcular currentMonthString usando dayjs no fuso horário do provedor ---
+  const currentMonthString = dayjs().tz(providerTimeZone).format('YYYY-MM');
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -136,50 +186,50 @@ export default function ProviderAppointments() {
       <div className="md:ml-64">
         <DashboardHeader onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="p-2 sm:p-4 lg:p-8">
-          {isLoading ? (
-            <></>
-          ) : apiError ? (
-            <div className="text-red-500 p-4 text-center">Erro: {apiError}</div>
-          ) : (
-            <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-foreground mb-2">
-                    Calendário de Agendamentos
-                  </h1>
-                  <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
-                    Visualize e gerencie todos os seus agendamentos
-                  </p>
-                </div>
+          <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-foreground mb-2">
+                  Calendário de Agendamentos
+                </h1>
+                <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
+                  Visualize e gerencie todos os seus agendamentos
+                </p>
               </div>
+            </div>
 
-              {/* Filter Bar */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={openFilterModal} className="flex items-center gap-2 bg-transparent">
-                    <Filter className="w-4 h-4" />
-                    Filtros
-                    {getActiveFiltersCount() < 3 && (<Badge variant="secondary" className="ml-1">{getActiveFiltersCount()}</Badge>)}
-                  </Button>
-                  {/* Active Filters Badges */}
-                  {!appliedStatusFilters.upcoming && (<Badge variant="outline" className="flex items-center gap-1">Agendados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("upcoming")} /></Badge>)}
-                  {!appliedStatusFilters.completed && (<Badge variant="outline" className="flex items-center gap-1">Concluídos ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("completed")} /></Badge>)}
-                  {!appliedStatusFilters.cancelled && (<Badge variant="outline" className="flex items-center gap-1">Cancelados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("cancelled")} /></Badge>)}
-                  {getActiveFiltersCount() < 3 && (<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs">Limpar filtros</Button>)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Mostrando {filteredAppointments.length} de {appointments.length} agendamentos
-                </div>
+            {/* Filter Bar - Renderiza sempre, mas talvez desabilitado ou com skeleton se isLoading */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={openFilterModal} className="flex items-center gap-2 bg-transparent" disabled={isLoading}>
+                  <Filter className="w-4 h-4" />
+                  Filtros
+                  {getActiveFiltersCount() < 3 && (<Badge variant="secondary" className="ml-1">{getActiveFiltersCount()}</Badge>)}
+                </Button>
+                {/* Active Filters Badges - Considerar renderizar skeleton ou desabilitar se isLoading */}
+                {!appliedStatusFilters.upcoming && (<Badge variant="outline" className="flex items-center gap-1">Agendados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("upcoming")} /></Badge>)}
+                {!appliedStatusFilters.completed && (<Badge variant="outline" className="flex items-center gap-1">Concluídos ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("completed")} /></Badge>)}
+                {!appliedStatusFilters.cancelled && (<Badge variant="outline" className="flex items-center gap-1">Cancelados ocultos<X className="w-3 h-3 cursor-pointer" onClick={() => removeFilter("cancelled")} /></Badge>)}
+                {getActiveFiltersCount() < 3 && (<Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs" disabled={isLoading}>Limpar filtros</Button>)}
               </div>
+              <div className="text-sm text-muted-foreground">
+                Mostrando {filteredAppointments.length} de {appointments.length} agendamentos
+              </div>
+            </div>
 
-              <ProviderCalendar
-                appointments={appointments}
-                handleAppointmentCreated={handleAppointmentCreated}
-                appliedStatusFilters={appliedStatusFilters}
-              />
+            {/* O ProviderCalendar agora recebe isLoading e apiError */}
+            <ProviderCalendar
+              appointments={filteredAppointments} 
+              handleAppointmentCreated={handleAppointmentCreated}
+              appliedStatusFilters={appliedStatusFilters}
+              providerTimeZone={providerTimeZone}
+              isLoading={isLoading} 
+              apiError={apiError}  
+            />
 
-              {/* Statistics */}
+            {/* Statistics - Renderiza apenas quando não está carregando e não há erro */}
+            {!isLoading && !apiError && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
                 <Card>
                   <CardContent className="p-3 sm:p-4 lg:p-6">
@@ -234,8 +284,8 @@ export default function ProviderAppointments() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </main>
       </div>
       <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>

@@ -14,6 +14,22 @@ import Cookies from 'js-cookie'
 import { Provider } from "@/types/Provider"
 import { toast } from "sonner"
 import { ProviderCardSkeleton } from "@/components/skeletons/ProviderCardSkeleton"
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+
+
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+
+// Configurar dayjs com os plugins de UTC e fuso horário
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+// ----------------------------------------------------------------
 
 export interface Filters {
     specialty: string;
@@ -38,10 +54,18 @@ export default function ProviderSearch() {
     const [appliedFilters, setAppliedFilters] = useState<Filters>({ specialty: "", nearMe: false, topRated: false, serviceType: "", showFavoritesOnly: false });
 
     const [favoritingInProgress, setFavoritingInProgress] = useState<Set<string>>(new Set());
+    const [userTimeZone, setUserTimeZone] = useState<string>('UTC');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            setUserTimeZone(detectedTimeZone);
+            console.log("Fuso horário", detectedTimeZone);
+        }
+    }, []);
 
     useEffect(() => {
         const fetchProviders = async () => {
-            console.log("[ProviderSearch] 1. Iniciando busca de prestadores...");
             setIsLoading(true);
             setApiError(null);
             const token = Cookies.get('authToken');
@@ -56,8 +80,6 @@ export default function ProviderSearch() {
             if (appliedFilters.specialty) params.append('specialty', appliedFilters.specialty);
             if (appliedFilters.topRated) params.append('topRated', 'true');
 
-            console.log(`[ProviderSearch] 2. Buscando com parâmetros: ${params.toString()}`);
-
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/provider?${params.toString()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -67,23 +89,21 @@ export default function ProviderSearch() {
                     throw new Error(errorData.error || "Falha ao buscar prestadores.");
                 }
                 const data: Provider[] = await response.json();
-                console.log("[ProviderSearch] 3. Dados brutos recebidos da API:", data);
+                console.log("Dados brutos recebidos da API:", data);
                 setProviders(data);
                 const initialFavorites = new Set(data.filter(p => p.isFavorite).map(p => p.id));
-                console.log("[ProviderSearch] 4. Favoritos iniciais definidos:", initialFavorites);
                 setFavorites(initialFavorites);
             } catch (error: any) {
-                console.error("[ProviderSearch] ERRO FATAL ao buscar prestadores:", error);
+                console.error("ERRO ao buscar prestadores:", error);
                 setApiError(error.message);
             } finally {
-                console.log("[ProviderSearch] 5. Busca de prestadores finalizada.");
                 setIsLoading(false);
             }
         };
 
         fetchProviders();
 
-    }, [searchTerm, appliedFilters]);
+    }, [searchTerm, appliedFilters, userTimeZone]);
 
     const specialties = [...new Set(providers.map(p => p.specialty).filter(Boolean) as string[])];
     const filteredProviders = providers.filter((provider) => {
@@ -93,7 +113,7 @@ export default function ProviderSearch() {
 
     const handleBookService = (provider: Provider, e: React.MouseEvent) => {
         e.stopPropagation();
-        console.log("[ProviderSearch] Abrindo modal de agendamento para o prestador:", provider);
+        console.log("Abrindo modal de agendamento para o prestador:", provider);
         setSelectedProvider(provider);
         setIsBookingModalOpen(true);
     };
@@ -124,31 +144,26 @@ export default function ProviderSearch() {
 
     const handleFavoriteClick = async (providerId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        console.log(`[ProviderSearch] A. Botão de favorito clicado para o provider ID: ${providerId}`);
         const token = Cookies.get('authToken');
         if (!token) {
             toast.error("Você precisa estar logado para favoritar.");
-            console.warn("[ProviderSearch] ERRO: Tentativa de favoritar sem token.");
             return;
         }
 
         const originalFavorites = new Set(favorites);
         setFavoritingInProgress(prev => new Set(prev).add(providerId));
-        
+
         setFavorites(prev => {
             const newFavs = new Set(prev);
             if (newFavs.has(providerId)) {
                 newFavs.delete(providerId);
-                console.log(`[ProviderSearch] B. (Otimista) Removendo favorito do estado: ${providerId}`);
             } else {
                 newFavs.add(providerId);
-                console.log(`[ProviderSearch] B. (Otimista) Adicionando favorito ao estado: ${providerId}`);
             }
             return newFavs;
         });
 
         try {
-            console.log(`[ProviderSearch] C. Enviando requisição para API /api/favorites/toggle para o provider ID: ${providerId}`);
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/favorites/toggle`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -159,7 +174,6 @@ export default function ProviderSearch() {
                 console.error(`[ProviderSearch] ERRO na API de favoritar. Revertendo para o estado original. Provider ID: ${providerId}`);
                 throw new Error("Falha ao atualizar favorito.");
             }
-            console.log(`[ProviderSearch] D. Sucesso na API de favoritar para o provider ID: ${providerId}`);
         } catch (error) {
             console.error("[ProviderSearch] ERRO FATAL no bloco catch do handleFavoriteClick:", error);
             toast.error((error as Error).message);
@@ -169,7 +183,6 @@ export default function ProviderSearch() {
                 newSet.delete(providerId);
                 return newSet;
             });
-            console.log(`[ProviderSearch] E. Finalizado processo de favoritar para o provider ID: ${providerId}`);
         }
     };
 
@@ -229,6 +242,7 @@ export default function ProviderSearch() {
                                 onFavoriteClick={handleFavoriteClick}
                                 onBookService={handleBookService}
                                 onCardClick={handleProviderClick}
+                                userTimeZone={userTimeZone}
                             />
                         ))}
                     </div>
@@ -241,8 +255,8 @@ export default function ProviderSearch() {
                 isOpen={isBookingModalOpen}
                 onClose={() => setIsBookingModalOpen(false)}
                 onBookingSuccess={handleBookingSuccess}
+                userTimeZone={userTimeZone}
             />
         </div>
     )
 }
-

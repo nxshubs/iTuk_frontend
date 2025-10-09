@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import Link from "next/link";
 
 import type { Appointment } from "@/types/Appointment";
+import dayjs from "dayjs";
 
 
 interface AppointmentDetailsModalProps {
@@ -19,6 +20,7 @@ interface AppointmentDetailsModalProps {
   onClose: () => void;
   userType: "CLIENT" | "PROVIDER";
   onUpdate?: () => void;
+  providerTimeZone: string;
 }
 
 export default function AppointmentDetailsModal({
@@ -27,13 +29,17 @@ export default function AppointmentDetailsModal({
   onClose,
   userType,
   onUpdate,
+  providerTimeZone, // <-- RECEBENDO A NOVA PROP
 }: AppointmentDetailsModalProps) {
   if (!appointment) return null;
 
   const personToShow = userType === "CLIENT" ? appointment.provider : appointment.client;
-  const dateObj = new Date(appointment.startTime);
-  const date = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const time = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  
+  // --- MUDANÇA: Usar dayjs para formatar a data e hora no fuso horário do provedor ---
+  const appointmentStartDayjs = dayjs.utc(appointment.startTime).tz(providerTimeZone);
+  const date = appointmentStartDayjs.format('DD [de] MMMM [de] YYYY');
+  const time = appointmentStartDayjs.format('HH:mm');
+  // ------------------------------------------------------------------------------------
 
   const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
     if (!phone) return "";

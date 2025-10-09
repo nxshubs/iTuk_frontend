@@ -1,3 +1,4 @@
+// src/components/Modal/BulkBlockModal.tsx
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -5,6 +6,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Ban, Loader2 } from "lucide-react"
+
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// ----------------------------------------------------------------
 
 interface BulkBlockModalProps {
   isOpen: boolean
@@ -16,7 +26,8 @@ interface BulkBlockModalProps {
   bulkReason: string
   setBulkReason: (reason: string) => void
   onBlockMultipleDays: () => void
-  isBlocking: boolean // Nova propriedade para o estado de carregamento
+  isBlocking: boolean
+  providerTimeZone: string; // <-- NOVA PROP
 }
 
 export function BulkBlockModal({
@@ -29,7 +40,8 @@ export function BulkBlockModal({
   bulkReason,
   setBulkReason,
   onBlockMultipleDays,
-  isBlocking, // Recebe o estado de carregamento
+  isBlocking,
+  providerTimeZone, // <-- RECEBENDO A NOVA PROP
 }: BulkBlockModalProps) {
   const handleClose = () => {
     onOpenChange(false)
@@ -37,6 +49,15 @@ export function BulkBlockModal({
     setBulkEndDate("")
     setBulkReason("")
   }
+
+  // --- MUDANÇA: Formata as datas para exibição usando dayjs no fuso horário do provedor ---
+  const formattedStartDate = bulkStartDate 
+    ? dayjs.utc(bulkStartDate).tz(providerTimeZone).format("D/MM/YYYY") 
+    : "";
+  const formattedEndDate = bulkEndDate 
+    ? dayjs.utc(bulkEndDate).tz(providerTimeZone).format("D/MM/YYYY") 
+    : "";
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -77,8 +98,8 @@ export function BulkBlockModal({
           {bulkStartDate && bulkEndDate && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800 font-poppins">
-                <strong>Período selecionado:</strong> {new Date(bulkStartDate).toLocaleDateString("pt-BR")} até{" "}
-                {new Date(bulkEndDate).toLocaleDateString("pt-BR")}
+                <strong>Período selecionado:</strong> {formattedStartDate} até{" "} {/* <-- USANDO AS DATAS FORMATADAS */}
+                {formattedEndDate}
               </p>
               <p className="text-xs text-blue-600 mt-1 font-poppins">
                 Dias com agendamentos existentes não serão bloqueados.
@@ -112,4 +133,3 @@ export function BulkBlockModal({
     </Dialog>
   )
 }
-

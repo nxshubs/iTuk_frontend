@@ -15,10 +15,11 @@ interface BookingModalProps {
     isOpen: boolean
     onClose: () => void
     onBookingSuccess?: () => void
+    userTimeZone: string;
 }
 
 export default function BookingModal({ provider, isOpen, onClose, onBookingSuccess }: BookingModalProps) {
-    const [selectedDate, setSelectedDate] = useState<string>(""); // Estado volta a ser string
+    const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string>("");
     const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
@@ -50,6 +51,7 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                 }
 
                 const data = await response.json();
+                console.log("Horarios disponiveis do prestadores:", data)
                 setAvailableTimes(data);
 
                 if (data.length === 0) {
@@ -72,7 +74,6 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
         setBookingError(null);
         const token = Cookies.get('authToken');
         
-        // A data já é uma string 'YYYY-MM-DD', então a conversão é direta
         const startTime = new Date(`${selectedDate}T${selectedTime}:00.000Z`).toISOString();
 
         try {
@@ -141,7 +142,6 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                         </Select>
                     </div>
 
-                    {/* 👇 VOLTAMOS A USAR O INPUT TYPE="DATE" 👇 */}
                     <div className="font-poppins space-y-2">
                         <Label><CalendarIcon className="w-4 h-4 inline mr-1" /> Selecione a data</Label>
                         <input

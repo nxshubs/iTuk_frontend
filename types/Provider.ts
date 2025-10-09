@@ -1,4 +1,5 @@
 import { Availability } from "./Availability";
+import { DetailedAddress } from "./DetailedAddress";
 import { PortfolioImage } from "./PortfolioImage";
 import { Review } from "./Review";
 import { Service } from "./Service";
@@ -7,8 +8,9 @@ export interface Provider {
     id: string;
     name: string | null;
     email: string;
-    photoUrl: string | null; 
-    address: string | null;
+    photoUrl: string | null;
+    address:  string| null;
+    detailedAddress: DetailedAddress | null;
     service?: string;
     specialty?: string;
     price?: string;

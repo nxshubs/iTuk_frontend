@@ -1,3 +1,4 @@
+// src/features/appointments/provider/index.tsx
 "use client"
 
 import AppointmentDetailsModal from "../AppointmentDetailsModal"
@@ -16,6 +17,15 @@ import { WeekView } from "./WeekView"
 import { DayView } from "./DayView"
 import { BlockDaysSkeleton } from "@/components/skeletons/BlockDaysSkeleton"
 
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// ----------------------------------------------------------------
+
 interface WeeklySchedule {
   [key: number]: { start: string; end: string }[];
 }
@@ -28,14 +38,14 @@ interface props {
   };
   appointments: Appointment[];
   handleAppointmentCreated: (newAppointment: Appointment) => void;
+  providerTimeZone: string;
 }
 
 export default function ProviderCalendar({
   appointments,
   handleAppointmentCreated,
+  providerTimeZone, // <-- RECEBENDO A NOVA PROP
 }: props) {
-
-
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -44,9 +54,11 @@ export default function ProviderCalendar({
   const [selectedDateForCreate, setSelectedDateForCreate] = useState<Date | null>(null)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [selectedTimeForCreate, setSelectedTimeForCreate] = useState<string | null>(null)
-  const [currentDate, setCurrentDate] = useState(new Date())
+  // --- MUDANÇA: Inicializa com dayjs no fuso horário do provedor ---
+  const [currentDate, setCurrentDate] = useState(dayjs().tz(providerTimeZone).toDate()) 
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
-  const [selectedWeek, setSelectedWeek] = useState<Date | null>(new Date())
+  // --- MUDANÇA: Inicializa com dayjs no fuso horário do provedor ---
+  const [selectedWeek, setSelectedWeek] = useState<Date | null>(dayjs().tz(providerTimeZone).toDate()) 
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("week")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -89,22 +101,26 @@ export default function ProviderCalendar({
         setIsLoading(false);
       }
     };
-    fetchAvailability();
-  }, []);
+    if (providerTimeZone) { // Só busca a disponibilidade se o fuso horário estiver definido
+      fetchAvailability();
+    }
+  }, [providerTimeZone]); // <-- Dependência adicionada: providerTimeZone
 
   useEffect(() => {
     if (viewMode === 'day' && !selectedDay) {
-      setSelectedDay(new Date());
+      setSelectedDay(dayjs().tz(providerTimeZone).toDate()); // <-- MUDANÇA
     }
-  }, [viewMode, selectedDay]);
+  }, [viewMode, selectedDay, providerTimeZone]); // <-- Dependência adicionada
 
   const getWorkingHoursForDate = (date: Date) => {
-    const dayOfWeek = date.getDay();
+    // --- MUDANÇA: Usar dayjs para obter o dia da semana no fuso horário do provedor ---
+    const dayOfWeek = dayjs(date).tz(providerTimeZone).day(); 
     const daySchedule = weeklySchedule[dayOfWeek] || [];
     if (daySchedule.length === 0) return [];
 
     const workingHours: string[] = [];
     for (const schedule of daySchedule) {
+      // Horários de início e fim já devem estar no formato HH:mm, então não precisam de tz() aqui
       const startHour = parseInt(schedule.start.split(":")[0]);
       const endHour = parseInt(schedule.end.split(":")[0]);
       for (let hour = startHour; hour < endHour; hour++) {
@@ -115,46 +131,52 @@ export default function ProviderCalendar({
   }
 
   const getAppointmentsForDate = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-
+    // --- MUDANÇA: Formata a data para comparação usando dayjs no fuso horário do provedor ---
+    const dateStr = dayjs(date).tz(providerTimeZone).format('YYYY-MM-DD');
     return appointments.filter((apt) => apt && apt.date === dateStr);
   }
 
   const getAppointmentForHour = (date: Date, hour: string) => {
     const dayAppointments = getAppointmentsForDate(date);
     return dayAppointments.find((apt) => {
-      const startHour = new Date(apt.startTime).getUTCHours();
-      const endHour = new Date(apt.endTime).getUTCHours();
+      // `apt.startTime` já está no fuso horário do provedor após o fetch em ProviderAppointments
+      const aptStartDayjs = dayjs.utc(apt.startTime).tz(providerTimeZone);
+      const aptEndDayjs = dayjs.utc(apt.endTime).tz(providerTimeZone);
+      
       const currentHour = parseInt(hour.split(":")[0]);
-      return currentHour >= startHour && currentHour < endHour;
+      
+      // Verifica se a hora atual está dentro do agendamento
+      return dayjs(date).tz(providerTimeZone).hour(currentHour).isSame(aptStartDayjs, 'hour') || 
+             (dayjs(date).tz(providerTimeZone).hour(currentHour).isAfter(aptStartDayjs, 'hour') && 
+              dayjs(date).tz(providerTimeZone).hour(currentHour).isBefore(aptEndDayjs, 'hour'));
     });
   }
 
   const isFirstHourOfAppointment = (date: Date, hour: string, appointment: Appointment | undefined) => {
     if (!appointment || !appointment.startTime) return false;
-    const startHour = new Date(appointment.startTime).getUTCHours();
+    // `appointment.startTime` já está no fuso horário do provedor
+    const aptStartHour = dayjs.utc(appointment.startTime).tz(providerTimeZone).hour();
     const currentHour = parseInt(hour.split(":")[0]);
-    return currentHour === startHour;
+    return currentHour === aptStartHour;
   }
 
   const getAppointmentDuration = (appointment: Appointment | undefined) => {
     if (!appointment || !appointment.startTime || !appointment.endTime) return 1;
-    const startHour = new Date(appointment.startTime).getUTCHours();
-    const endHour = new Date(appointment.endTime).getUTCHours();
-    const duration = endHour - startHour;
+    // `appointment.startTime` e `appointment.endTime` já estão no fuso horário do provedor
+    const startDayjs = dayjs.utc(appointment.startTime).tz(providerTimeZone);
+    const endDayjs = dayjs.utc(appointment.endTime).tz(providerTimeZone);
+    const duration = endDayjs.diff(startDayjs, 'hour'); // Diferença em horas
     return duration > 0 ? duration : 1;
   }
 
   const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
+    // --- MUDANÇA: Usar dayjs para calcular os dias no fuso horário do provedor ---
+    const dayjsDate = dayjs(date).tz(providerTimeZone);
+    const firstDay = dayjsDate.startOf('month');
+    const lastDay = dayjsDate.endOf('month');
+    const daysInMonth = lastDay.date();
+    const startingDayOfWeek = firstDay.day(); // 0 para domingo, 1 para segunda...
+
     const days: (number | null)[] = []
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null)
@@ -166,48 +188,48 @@ export default function ProviderCalendar({
   }
 
   const getWeekDays = (date: Date) => {
-    const startOfWeek = new Date(date)
-    const day = startOfWeek.getDay()
-    const diff = startOfWeek.getDate() - day
-    startOfWeek.setDate(diff)
-    const weekDays: Date[] = []
+    // --- MUDANÇA: Usar dayjs para calcular os dias da semana no fuso horário do provedor ---
+    const startOfWeek = dayjs(date).tz(providerTimeZone).startOf('week'); // startOf('week') considera domingo como o primeiro dia por padrão
+    const weekDays: Date[] = [];
     for (let i = 0; i < 7; i++) {
-      const day = new Date(startOfWeek)
-      day.setDate(startOfWeek.getDate() + i)
-      weekDays.push(day)
+      weekDays.push(startOfWeek.add(i, 'day').toDate());
     }
-    return weekDays
+    return weekDays;
   }
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate((prev) => {
-      const newDate = new Date(prev)
-      newDate.setMonth(direction === "prev" ? prev.getMonth() - 1 : prev.getMonth() + 1)
-      return newDate
+      // --- MUDANÇA: Navega usando dayjs no fuso horário do provedor ---
+      const newDayjs = dayjs(prev).tz(providerTimeZone);
+      const updatedDayjs = direction === "prev" ? newDayjs.subtract(1, 'month') : newDayjs.add(1, 'month');
+      return updatedDayjs.toDate();
     })
   }
 
   const navigateWeek = (direction: "prev" | "next") => {
     setSelectedWeek((prev) => {
       if (!prev) return null
-      const newDate = new Date(prev)
-      newDate.setDate(direction === "prev" ? prev.getDate() - 7 : prev.getDate() + 7)
-      return newDate
+      // --- MUDANÇA: Navega usando dayjs no fuso horário do provedor ---
+      const newDayjs = dayjs(prev).tz(providerTimeZone);
+      const updatedDayjs = direction === "prev" ? newDayjs.subtract(7, 'day') : newDayjs.add(7, 'day');
+      return updatedDayjs.toDate();
     })
   }
 
   const navigateDay = (direction: "prev" | "next") => {
     setSelectedDay((prev) => {
       if (!prev) return null
-      const newDate = new Date(prev)
-      newDate.setDate(direction === "prev" ? prev.getDate() - 1 : prev.getDate() + 1)
-      return newDate
+      // --- MUDANÇA: Navega usando dayjs no fuso horário do provedor ---
+      const newDayjs = dayjs(prev).tz(providerTimeZone);
+      const updatedDayjs = direction === "prev" ? newDayjs.subtract(1, 'day') : newDayjs.add(1, 'day');
+      return updatedDayjs.toDate();
     })
   }
 
   const handleDayClick = (day: number) => {
     if (!day) return
-    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    // --- MUDANÇA: Cria a nova data usando dayjs no fuso horário do provedor ---
+    const newDate = dayjs().tz(providerTimeZone).year(currentDate.getFullYear()).month(currentDate.getMonth()).date(day).toDate();
     setSelectedDay(newDate)
     setViewMode("day")
   }
@@ -244,27 +266,35 @@ export default function ProviderCalendar({
   }
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+    // --- MUDANÇA: Formata a data usando dayjs no fuso horário do provedor ---
+    return dayjs(date).tz(providerTimeZone).format("dddd, D [de] MMMM [de] YYYY")
   }
 
   const formatWeekRange = (startDate: Date) => {
-    const endDate = new Date(startDate)
-    endDate.setDate(startDate.getDate() + 6)
-    if (startDate.getMonth() === endDate.getMonth()) {
-      return `${startDate.getDate()} - ${endDate.getDate()} de ${monthNames[startDate.getMonth()]} ${startDate.getFullYear()}`
+    // --- MUDANÇA: Formata o range da semana usando dayjs no fuso horário do provedor ---
+    const startDayjs = dayjs(startDate).tz(providerTimeZone);
+    const endDayjs = startDayjs.add(6, 'day');
+
+    if (startDayjs.month() === endDayjs.month()) {
+      return `${startDayjs.date()} - ${endDayjs.date()} de ${monthNames[startDayjs.month()]} ${startDayjs.year()}`
     } else {
-      return `${startDate.getDate()} de ${monthNames[startDate.getMonth()]} - ${endDate.getDate()} de ${monthNames[endDate.getMonth()]} ${startDate.getFullYear()}`
+      return `${startDayjs.date()} de ${monthNames[startDayjs.month()]} - ${endDayjs.date()} de ${monthNames[endDayjs.month()]} ${startDayjs.year()}`
     }
   }
 
   const days = getDaysInMonth(currentDate)
   const isToday = (day: number) => {
-    const today = new Date();
-    return (day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear())
+    // --- MUDANÇA: Compara com "hoje" usando dayjs no fuso horário do provedor ---
+    const todayDayjs = dayjs().tz(providerTimeZone);
+    const currentDayjs = dayjs().tz(providerTimeZone).year(currentDate.getFullYear()).month(currentDate.getMonth()).date(day);
+    return currentDayjs.isSame(todayDayjs, 'day');
   }
 
   const isTodayDate = (date: Date) => {
-    return date.toDateString() === new Date().toDateString()
+    // --- MUDANÇA: Compara com "hoje" usando dayjs no fuso horário do provedor ---
+    const todayDayjs = dayjs().tz(providerTimeZone);
+    const targetDayjs = dayjs(date).tz(providerTimeZone);
+    return targetDayjs.isSame(todayDayjs, 'day');
   }
 
   const handleNavigation = (direction: "prev" | "next") => {
@@ -274,7 +304,8 @@ export default function ProviderCalendar({
   }
 
   const handleTodayClick = () => {
-    const today = new Date()
+    // --- MUDANÇA: Define "hoje" usando dayjs no fuso horário do provedor ---
+    const today = dayjs().tz(providerTimeZone).toDate();
     if (viewMode === "month") setCurrentDate(today)
     else if (viewMode === "week") setSelectedWeek(today)
     else setSelectedDay(today)
@@ -329,18 +360,27 @@ export default function ProviderCalendar({
           </CardHeader>
           <CardContent className="p-1 sm:p-2 lg:p-6">
             {viewMode === "month" ? (
-              <MonthView currentDate={currentDate} days={days} getAppointmentsForDate={getAppointmentsForDate} getStatusColor={getStatusColor} handleAppointmentClick={handleAppointmentClick} handleDayClick={handleDayClick} isToday={isToday} weekDays={weekDays} />
+              <MonthView 
+                currentDate={currentDate} 
+                days={days} 
+                getAppointmentsForDate={getAppointmentsForDate} 
+                getStatusColor={getStatusColor} 
+                handleAppointmentClick={handleAppointmentClick} 
+                handleDayClick={handleDayClick} 
+                isToday={isToday} 
+                weekDays={weekDays} 
+                providerTimeZone={providerTimeZone} 
+              />
             ) : viewMode === "week" ? (
               selectedWeek && (
                 <WeekView
-                  // 👇 CORREÇÃO APLICADA AQUI 👇
                   selectedWeek={selectedWeek}
                   weekDays={weekDays}
                   weekDaysFull={weekDaysFull}
                   monthNames={monthNames}
                   isTodayDate={isTodayDate}
                   getWorkingHoursForDate={getWorkingHoursForDate}
-                  getAppointmentsForDate={getAppointmentsForDate} // Passando a prop que faltava
+                  getAppointmentsForDate={getAppointmentsForDate}
                   getAppointmentForHour={getAppointmentForHour}
                   isFirstHourOfAppointment={isFirstHourOfAppointment}
                   getAppointmentDuration={getAppointmentDuration}
@@ -348,11 +388,22 @@ export default function ProviderCalendar({
                   handleWeekDayClick={handleWeekDayClick}
                   handleCreateAppointment={handleCreateAppointment}
                   getStatusColor={getStatusColor}
+                  providerTimeZone={providerTimeZone} 
                 />
               )
             ) : (
               selectedDay && (
-                <DayView getAppointmentForHour={getAppointmentForHour} getStatusColor={getStatusColor} getWorkingHoursForDate={getWorkingHoursForDate} handleAppointmentClick={handleAppointmentClick} handleCreateAppointment={handleCreateAppointment} isTodayDate={isTodayDate} selectedDay={selectedDay} getAppointmentsForDate={getAppointmentsForDate} />
+                <DayView 
+                  getAppointmentForHour={getAppointmentForHour} 
+                  getStatusColor={getStatusColor} 
+                  getWorkingHoursForDate={getWorkingHoursForDate} 
+                  handleAppointmentClick={handleAppointmentClick} 
+                  handleCreateAppointment={handleCreateAppointment} 
+                  isTodayDate={isTodayDate} 
+                  selectedDay={selectedDay} 
+                  getAppointmentsForDate={getAppointmentsForDate}
+                  providerTimeZone={providerTimeZone} 
+                />
               )
             )}
           </CardContent>
@@ -364,6 +415,7 @@ export default function ProviderCalendar({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         userType="PROVIDER"
+        providerTimeZone={providerTimeZone} 
       />
       <CreateAppointmentModal
         isOpen={isCreateModalOpen}
@@ -371,6 +423,7 @@ export default function ProviderCalendar({
         selectedDate={selectedDateForCreate}
         selectedTime={selectedTimeForCreate}
         onCreateAppointment={handleAppointmentCreated}
+        providerTimeZone={providerTimeZone} 
       />
     </>
   )

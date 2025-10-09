@@ -4,34 +4,44 @@ import { Card, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
+// --- IMPORTS dayjs ---
+import dayjs from "dayjs"
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import 'dayjs/locale/pt-br'; // Importar locale para formatação em português
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale('pt-br'); // Usar o locale português
+// ----------------------------------------------------------------
+
 type ViewMode = "month" | "week" | "day"
 
 interface CalendarHeaderProps {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
-  currentDate: Date;
-  setCurrentDate: (date: Date) => void;
+  currentDate: dayjs.Dayjs;
+  setCurrentDate: (date: dayjs.Dayjs) => void;
   navigateDate: (direction: "prev" | "next") => void;
+  userTimeZone: string; // Adicionando userTimeZone para formatação precisa de "Hoje"
 }
 
-export default function CalendarHeader({ viewMode, setViewMode, currentDate, setCurrentDate, navigateDate }: CalendarHeaderProps) {
-  
+export default function CalendarHeader({ viewMode, setViewMode, currentDate, setCurrentDate, navigateDate, userTimeZone }: CalendarHeaderProps) {
+
   const formatDate = (): string => {
     if (viewMode === "month") {
-      return currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+      return currentDate.format("MMMM [de] YYYY");
     }
     if (viewMode === "week") {
-      const startOfWeek = new Date(currentDate);
-      startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
-        return `${startOfWeek.getDate()} - ${endOfWeek.getDate()} de ${endOfWeek.toLocaleDateString("pt-BR", { month: 'long', year: 'numeric' })}`;
+      const startOfWeek = currentDate.startOf('week');
+      const endOfWeek = currentDate.endOf('week');
+
+      if (startOfWeek.month() === endOfWeek.month()) {
+        return `${startOfWeek.date()} - ${endOfWeek.date()} de ${endOfWeek.format("MMMM [de] YYYY")}`;
       }
-      return `${startOfWeek.toLocaleDateString("pt-BR", { day: '2-digit', month: 'short' })} - ${endOfWeek.toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', year: 'numeric' })}`;
+      return `${startOfWeek.format("DD/MMM")} - ${endOfWeek.format("DD/MMM [de] YYYY")}`;
     }
-    return currentDate.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    return currentDate.format("dddd, DD [de] MMMM [de] YYYY");
   }
 
   return (
@@ -50,7 +60,8 @@ export default function CalendarHeader({ viewMode, setViewMode, currentDate, set
             <h2 className="text-sm sm:text-lg font-semibold min-w-[150px] sm:min-w-[200px] text-center capitalize">{formatDate()}</h2>
             <Button variant="outline" size="sm" onClick={() => navigateDate("next")}><ChevronRight className="w-4 h-4" /></Button>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="text-xs sm:text-sm font-poppins">Hoje</Button>
+          {/* Botão Hoje: Define para o início do dia ATUAL no fuso horário do usuário */}
+          <Button variant="outline" size="sm" onClick={() => setCurrentDate(dayjs().tz(userTimeZone).startOf('day'))} className="text-xs sm:text-sm font-poppins">Hoje</Button>
         </div>
       </CardHeader>
     </Card>

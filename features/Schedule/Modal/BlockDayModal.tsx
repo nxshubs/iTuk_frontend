@@ -1,3 +1,4 @@
+// src/components/Modal/BlockDayModal.tsx
 "use client"
 
 import { useState } from "react";
@@ -6,13 +7,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Ban, Loader2 } from "lucide-react"
 
-// A interface foi simplificada para não necessitar mais de 'setBlockReason'
+// --- NOVAS IMPORTAÇÕES NECESSÁRIAS PARA dayjs E FUSO HORÁRIO ---
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// ----------------------------------------------------------------
+
 interface BlockDayModalProps {
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
-  selectedDate: string
+  selectedDate: string // Formato "YYYY-MM-DD"
   onBlockDay: (reason?: string) => void
   isSaving: boolean
+  providerTimeZone: string; // <-- NOVA PROP
 }
 
 export function BlockDayModal({ 
@@ -20,14 +30,19 @@ export function BlockDayModal({
   onOpenChange, 
   selectedDate, 
   onBlockDay, 
-  isSaving
+  isSaving,
+  providerTimeZone // <-- RECEBENDO A NOVA PROP
 }: BlockDayModalProps) {
-  // Estado local para gerir o motivo do bloqueio
   const [reason, setReason] = useState("");
 
   const handleBlock = () => {
-    onBlockDay(reason || "Dia bloqueado"); // Passa o motivo ao clicar
+    onBlockDay(reason || "Dia bloqueado");
   }
+
+  // --- MUDANÇA: Formata a data selecionada usando dayjs no fuso horário do provedor ---
+  const formattedSelectedDate = selectedDate 
+    ? dayjs.utc(selectedDate).tz(providerTimeZone).format("dddd, D [de] MMMM [de] YYYY")
+    : "";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -39,18 +54,11 @@ export function BlockDayModal({
           <div>
             <label className="text-sm font-medium mb-2 block">Data Selecionada</label>
             <p className="text-sm text-gray-600">
-              {selectedDate &&
-                new Date(selectedDate + "T00:00:00").toLocaleDateString("pt-BR", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+              {formattedSelectedDate} {/* <-- USANDO A DATA FORMATADA */}
             </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Motivo (opcional)</label>
-            {/* O Select agora atualiza o estado local 'reason' */}
             <Select onValueChange={setReason} value={reason}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um motivo" />
@@ -91,4 +99,3 @@ export function BlockDayModal({
     </Dialog>
   )
 }
-

@@ -1,3 +1,4 @@
+// src/components/ScheduleManagement.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -13,7 +14,13 @@ import { BlockDaysSkeleton } from "@/components/skeletons/BlockDaysSkeleton"
 import { apiFetch } from "@/lib/api"
 import { toast } from "sonner"
 
-// --- Tipos de Dados ---
+
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 interface Availability {
   id: string;
   dayOfWeek: number;
@@ -27,19 +34,18 @@ interface WeeklySchedule {
 
 interface BlockedDay {
   id: string
-  date: string // Formato "YYYY-MM-DD"
+  date: string
   reason?: string
 }
 
 interface Appointment {
   id: string;
-  date: string; // Formato "YYYY-MM-DD"
+  date: string; 
+  time: string; 
   clientName: string;
 }
 
-// --- Componente Principal ---
 export function ScheduleManagement() {
-  // Estado da UI
   const [viewMode, setViewMode] = useState<"calendar" | "weekly">("weekly")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -47,6 +53,7 @@ export function ScheduleManagement() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>([])
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({})
+  const [providerTimeZone, setProviderTimeZone] = useState<string>('America/Sao_Paulo'); 
   const [appointments, setAppointments] = useState<Appointment[]>([]) 
 
   const [isBlockDayModalOpen, setIsBlockDayModalOpen] = useState(false)
@@ -59,6 +66,28 @@ export function ScheduleManagement() {
   const [bulkEndDate, setBulkEndDate] = useState<string>("")
   const [bulkReason, setBulkReason] = useState<string>("")
 
+  useEffect(() => {
+    const fetchProviderSettings = async () => {
+      const token = Cookies.get('authToken');
+      if (!token) return; 
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setProviderTimeZone(userData.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo');
+        } else {
+          console.warn("Não foi possível buscar as configurações do provedor para o fuso horário.");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar fuso horário do provedor:", error);
+      }
+    };
+    fetchProviderSettings();
+  }, []);
+
   const fetchData = async () => {
     setIsLoading(true)
     setApiError(null)
@@ -70,17 +99,19 @@ export function ScheduleManagement() {
     }
 
     try {
-      const [availabilityRes, blockedDatesRes] = await Promise.all([
+      const [availabilityRes, blockedDatesRes, appointmentsRes] = await Promise.all([ 
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/availability`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blocked-dates`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/blocked-dates`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/provider`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      if (!availabilityRes.ok || !blockedDatesRes.ok) {
+      if (!availabilityRes.ok || !blockedDatesRes.ok || !appointmentsRes.ok) {
         throw new Error("Falha ao carregar os dados de agendamento.")
       }
 
       const availabilityData: Availability[] = await availabilityRes.json();
       const blockedDatesData: BlockedDay[] = await blockedDatesRes.json();
+      const appointmentsData: Appointment[] = await appointmentsRes.json(); 
 
       const schedule: WeeklySchedule = {};
       availabilityData.forEach(avail => {
@@ -89,7 +120,11 @@ export function ScheduleManagement() {
       });
 
       setWeeklySchedule(schedule);
-      setBlockedDays(blockedDatesData.map(d => ({ ...d, date: d.date.split('T')[0] })));
+      setBlockedDays(blockedDatesData.map(d => ({ ...d, date: dayjs.utc(d.date).tz(providerTimeZone).format('YYYY-MM-DD') }))); 
+      setAppointments(appointmentsData.map(apt => ({
+        ...apt,
+        date: dayjs.utc(apt.date).tz(providerTimeZone).format('YYYY-MM-DD') 
+      })));
 
     } catch (error: any) {
       setApiError(error.message)
@@ -99,8 +134,10 @@ export function ScheduleManagement() {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (providerTimeZone !== 'America/Sao_Paulo') { 
+      fetchData();
+    }
+  }, [providerTimeZone]);
 
   const blockDay = async (reason?: string) => {
     setIsSaving(true)
@@ -188,8 +225,8 @@ export function ScheduleManagement() {
   }
 
   const handleDayClick = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0]
-    const dayAppointments = appointments.filter((apt) => apt.date === dateStr)
+    const dateStr = dayjs(date).tz(providerTimeZone).format("YYYY-MM-DD");
+    const dayAppointments = appointments.filter((apt) => apt.date === dateStr);
 
     if (dayAppointments.length > 0) {
       setConflictAppointments(dayAppointments)
@@ -235,6 +272,7 @@ export function ScheduleManagement() {
           onDayClick={handleDayClick}
           onUnblockDay={unblockDay}
           unblockingId={unblockingId}
+          providerTimeZone={providerTimeZone} 
         />
       ) : (
         <WeeklyView
@@ -251,11 +289,13 @@ export function ScheduleManagement() {
         selectedDate={selectedDate}
         onBlockDay={blockDay}
         isSaving={isSaving}
+        providerTimeZone={providerTimeZone}
       />
       <ConflictModal
         isOpen={isConflictModalOpen}
         onOpenChange={setIsConflictModalOpen}
         appointments={conflictAppointments}
+        providerTimeZone={providerTimeZone}
       />
       <BulkBlockModal
         isOpen={isBulkBlockModalOpen}
@@ -268,8 +308,8 @@ export function ScheduleManagement() {
         setBulkReason={setBulkReason}
         onBlockMultipleDays={blockMultipleDays}
         isBlocking={isSaving}
+        providerTimeZone={providerTimeZone}
       />
     </div>
   )
 }
-
