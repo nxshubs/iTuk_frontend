@@ -82,13 +82,15 @@ export default function Reviews({ reviews }: ReviewsProps) {
                                 <div key={review.id} className="border-t pt-6 first:border-t-0 first:pt-0">
                                     <div className="flex gap-4">
                                         <img
-                                            src={review.reviewer.photoUrl || "/placeholder.svg"}
-                                            alt={review.reviewer.name}
+                                            // Corrigido: Usar encadeamento opcional para acessar 'reviewer' e 'photoUrl'
+                                            // Adicionar um valor padrão para review.reviewer.name também é uma boa prática
+                                            src={review.reviewer?.photoUrl || "/placeholder.svg"} 
+                                            alt={review.reviewer?.name || "Usuário"} // Adicionado valor padrão para alt
                                             className="w-10 h-10 rounded-full object-cover"
                                         />
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="font-semibold">{review.reviewer.name}</span>
+                                                <span className="font-semibold">{review.reviewer?.name || "Usuário Anônimo"}</span> {/* Adicionado valor padrão */}
                                                 <span className="text-sm text-muted-foreground">{new Date(review.createdAt).toLocaleDateString()}</span>
                                             </div>
                                             <div className="flex items-center gap-2 mb-2">
