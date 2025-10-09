@@ -1,5 +1,3 @@
-// Arquivo: types/Review.ts
-
 export interface Review {
   // Estrutura principal
   id: string;
@@ -12,7 +10,7 @@ export interface Review {
     name: string | null;
     photoUrl: string | null;
   };
-  
+
   // Objeto para quem foi avaliado (substitui providerName)
   reviewed: {
     name: string | null;
@@ -26,4 +24,12 @@ export interface Review {
   // Flags de controle
   canEdit?: boolean;
   isPublic?: boolean;
+}
+
+export interface Service {
+    id: string;
+    name: string;
+    description?: string | null;
+    durationInMinutes: number;
+    price: number;
 }

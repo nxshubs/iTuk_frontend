@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Appointment } from "@/types/Appointment"
+import { Review } from "@/types/Review"; // Certifique-se de importar Review se não estiver importado
 import Cookies from "js-cookie"
+import { toast } from "sonner"
 
 // Modais
 import ReviewModal from "../../Review/ReviewModal"
@@ -20,28 +22,34 @@ import { ClientCalendarSkeleton } from "@/components/skeletons/ClientCalendarSke
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'; // NOVO PLUGIN
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'; // NOVO PLUGIN
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import 'dayjs/locale/pt-br';
 
-// Configurar dayjs com os plugins de UTC, fuso horário e comparação de datas
 dayjs.extend(utc);
 dayjs.extend(timezone);
-dayjs.extend(isSameOrAfter); // Estender para usar isSameOrAfter
-dayjs.extend(isSameOrBefore); // Estender para usar isSameOrBefore
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+dayjs.locale('pt-br');
 // ----------------------------------------------------------------
+
+// Definindo AppointmentWithReview aqui para ser consistente
+interface AppointmentWithReview extends Appointment {
+    review?: Review | null;
+}
 
 type ViewMode = "month" | "week" | "day"
 
 export default function ClientAppointments() {
-    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithReview | null>(null); // Tipo ajustado
     const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState<boolean>(false);
-    const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState<boolean>(false);
+    const [isRescheduleModalOpen, setIsRescheduleModal] = useState<boolean>(false);
     const [viewMode, setViewMode] = useState<ViewMode>("week");
 
     const [currentDate, setCurrentDate] = useState<dayjs.Dayjs>(dayjs().startOf('day'));
 
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [appointments, setAppointments] = useState<AppointmentWithReview[]>([]); // Tipo ajustado
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -57,81 +65,134 @@ export default function ClientAppointments() {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchAppointments = async () => {
-            setIsLoading(true);
-            setError(null);
-            const token = Cookies.get('authToken');
-            if (!token) {
-                setError("Não autenticado. Por favor, faça login novamente.");
-                setIsLoading(false);
-                return;
-            }
+    const fetchAppointments = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        const token = Cookies.get('authToken');
+        if (!token) {
+            setError("Não autenticado. Por favor, faça login novamente.");
+            setIsLoading(false);
+            toast.error("Sessão inválida. Por favor, faça login novamente.");
+            return;
+        }
 
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/client`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) {
-                    throw new Error("Falha ao buscar agendamentos.");
-                }
-                const data: Appointment[] = await response.json();
-                setAppointments(data);
-                console.log("[ClientAppointments] Agendamentos recebidos (UTC):", data);
-            } catch (err) {
-                setError((err as Error).message);
-            } finally {
-                setIsLoading(false);
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/client/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Falha ao buscar agendamentos.");
             }
-        };
-        fetchAppointments();
-    }, []);
+            const data: AppointmentWithReview[] = await response.json(); // Tipo ajustado
+
+            data.forEach(apt => {
+                const aptStartTimeUTC = dayjs.utc(apt.startTime);
+                const aptStartTimeLocal = aptStartTimeUTC.tz(userTimeZone);
+                console.log(
+                    `[Agendamento ${apt.id}] UTC: ${apt.startTime} | Local (${userTimeZone}): ${aptStartTimeLocal.format()}`
+                );
+            });
+
+            setAppointments(data);
+            console.log("[ClientAppointments] Agendamentos recebidos:", data);
+        } catch (err: any) {
+            setError(err.message);
+            toast.error(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [userTimeZone]);
+
+    useEffect(() => {
+        if (userTimeZone !== 'UTC') {
+            fetchAppointments();
+        }
+    }, [userTimeZone, fetchAppointments]);
 
     const formatPhoneNumber = (phone: string): string => phone.replace(/\D/g, "");
 
-    const handleWhatsAppClick = (e: React.MouseEvent, phone: string | undefined) => {
+    const handleWhatsAppClick = (e: React.MouseEvent, phone: string | undefined | null) => {
         e.stopPropagation();
         if (!phone) return;
         window.open(`https://wa.me/${formatPhoneNumber(phone)}`, "_blank", "noopener,noreferrer");
     };
 
-    const handlePhoneClick = (e: React.MouseEvent, phone: string | undefined) => {
+    const handlePhoneClick = (e: React.MouseEvent, phone: string | undefined | null) => {
         e.stopPropagation();
         if (!phone) return;
         window.open(`tel:${phone}`);
     };
 
-    const handleReview = (appointment: Appointment): void => {
+    const handleReview = useCallback((appointment: AppointmentWithReview): void => { // Tipo ajustado
         setSelectedAppointment(appointment);
         setIsReviewModalOpen(true);
-    };
+    }, []);
 
-    const handleViewDetails = (appointment: Appointment): void => {
+    const handleViewDetails = useCallback((appointment: AppointmentWithReview): void => { // Tipo ajustado
         setSelectedAppointment(appointment);
         setIsDetailsModalOpen(true);
-    };
+    }, []);
 
-    const handleOpenRescheduleModal = (): void => {
+    const handleOpenRescheduleModal = useCallback((): void => {
         setIsDetailsModalOpen(false);
-        setIsRescheduleModalOpen(true);
-    };
+        setIsRescheduleModal(true);
+    }, []);
 
-    const handleRescheduleSubmit = (appointmentId: string, newDate: string, newTime: string): void => {
-        // Você receberá newDate e newTime no formato 'YYYY-MM-DD' e 'HH:mm' do modal.
-        // É crucial convertê-los para UTC antes de enviar para a API.
-        
-        // Combina a data e hora no fuso horário do usuário
-        const newDateTimeLocal = dayjs(`${newDate}T${newTime}`).tz(userTimeZone, true); // `true` para manter o offset
-        
-        // Converte para UTC e formata para string ISO
+    const handleRescheduleSubmit = useCallback(async (appointmentId: string, newDate: string, newTime: string) => {
+        if (!selectedAppointment) {
+            toast.error("Nenhum agendamento selecionado para reagendar.");
+            return;
+        }
+
+        const newDateTimeLocal = dayjs(`${newDate}T${newTime}`).tz(userTimeZone, true);
         const newStartTimeUTC = newDateTimeLocal.utc().toISOString();
 
-        console.log(`Solicitando reagendamento para ${appointmentId} para nova data/hora (UTC): ${newStartTimeUTC}`);
-        alert(`Funcionalidade de reagendamento a ser implementada. Enviaria: ${newStartTimeUTC}`);
-        setIsRescheduleModalOpen(false);
-    };
+        const currentStartTimeLocal = dayjs.utc(selectedAppointment.startTime).tz(userTimeZone);
+        const currentEndTimeLocal = dayjs.utc(selectedAppointment.endTime).tz(userTimeZone);
+        const durationMinutes = currentEndTimeLocal.diff(currentStartTimeLocal, 'minute');
+        const newEndTimeUTC = newDateTimeLocal.add(durationMinutes, 'minute').utc().toISOString();
 
-    const navigateDate = (direction: "prev" | "next"): void => {
+        console.log(`Solicitando reagendamento para ${appointmentId} para nova data/hora (UTC): ${newStartTimeUTC} - ${newEndTimeUTC}`);
+
+        const token = Cookies.get('authToken');
+        if (!token) {
+            toast.error("Sessão inválida. Por favor, faça login novamente.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/${appointmentId}/reschedule-request`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    newStartTime: newStartTimeUTC,
+                    newEndTime: newEndTimeUTC,
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Falha ao solicitar reagendamento.");
+            }
+
+            const updatedAppointment: AppointmentWithReview = await response.json(); // Tipo ajustado
+            setAppointments(prev => prev.map(apt => apt.id === updatedAppointment.id ? updatedAppointment : apt));
+            setSelectedAppointment(updatedAppointment);
+            toast.success("Solicitação de reagendamento enviada com sucesso!");
+            setIsRescheduleModal(false);
+            setIsDetailsModalOpen(false);
+            fetchAppointments();
+        } catch (err: any) {
+            toast.error(err.message || "Erro ao solicitar reagendamento.");
+        }
+    }, [selectedAppointment, userTimeZone, fetchAppointments]);
+
+
+    const navigateDate = useCallback((direction: "prev" | "next"): void => {
         const offset = direction === "next" ? 1 : -1;
         let newDate: dayjs.Dayjs;
 
@@ -143,9 +204,9 @@ export default function ClientAppointments() {
             newDate = currentDate.add(offset, 'day');
         }
         setCurrentDate(newDate);
-    };
+    }, [currentDate, viewMode]);
 
-    const getAppointmentsForDate = (date: dayjs.Dayjs): Appointment[] => {
+    const getAppointmentsForDate = useCallback((date: dayjs.Dayjs): AppointmentWithReview[] => { // Tipo de retorno ajustado
         const startOfDayLocal = date.startOf('day');
         const endOfDayLocal = date.endOf('day');
 
@@ -153,16 +214,20 @@ export default function ClientAppointments() {
             const aptStartTimeUTC = dayjs.utc(apt.startTime);
             const aptStartTimeLocal = aptStartTimeUTC.tz(userTimeZone);
 
-            // Verifica se o agendamento cai dentro do dia (no fuso horário do usuário)
-            // isSameOrAfter e isSameOrBefore agora estão disponíveis
-            return aptStartTimeLocal.isSameOrAfter(startOfDayLocal) && aptStartTimeLocal.isSameOrBefore(endOfDayLocal);
+            return aptStartTimeLocal.isSameOrAfter(startOfDayLocal, 'minute') && aptStartTimeLocal.isSameOrBefore(endOfDayLocal, 'minute');
         }).sort((a, b) => {
             const timeA = dayjs.utc(a.startTime).tz(userTimeZone);
             const timeB = dayjs.utc(b.startTime).tz(userTimeZone);
             return timeA.diff(timeB);
         });
-    };
+    }, [appointments, userTimeZone]);
 
+    const handleAppointmentUpdated = useCallback((updatedAppointment: AppointmentWithReview) => { // Tipo ajustado
+        setAppointments(prev =>
+            prev.map(apt => (apt.id === updatedAppointment.id ? updatedAppointment : apt))
+        );
+        setSelectedAppointment(updatedAppointment);
+    }, []);
 
     const renderContent = () => {
         if (isLoading) {
@@ -181,7 +246,7 @@ export default function ClientAppointments() {
                     currentDate={currentDate}
                     setCurrentDate={setCurrentDate}
                     navigateDate={navigateDate}
-                    userTimeZone={userTimeZone} // <<< CORREÇÃO: Passando userTimeZone
+                    userTimeZone={userTimeZone}
                 />
                 {viewMode === "month" && (
                     <MonthView
@@ -191,6 +256,7 @@ export default function ClientAppointments() {
                         getAppointmentsForDate={getAppointmentsForDate}
                         onViewDetails={handleViewDetails}
                         userTimeZone={userTimeZone}
+                        appointments={appointments} // << CORREÇÃO: Passando 'appointments'
                     />
                 )}
                 {viewMode === "week" && (
@@ -208,7 +274,7 @@ export default function ClientAppointments() {
                         currentDate={currentDate}
                         getAppointmentsForDate={getAppointmentsForDate}
                         onViewDetails={handleViewDetails}
-                        onReview={handleReview}
+                        handleReview={handleReview} // << CORREÇÃO: Adicionado 'handleReview'
                         userTimeZone={userTimeZone}
                     />
                 )}
@@ -217,22 +283,40 @@ export default function ClientAppointments() {
     };
 
     return (
-        <div>
+        <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+            <h1 className="text-3xl font-bold mb-8 text-center text-foreground font-heading">Meus Agendamentos</h1>
             {renderContent()}
-            <ReviewModal appointment={selectedAppointment} isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} />
+
+            <ReviewModal
+                appointment={selectedAppointment}
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                onSubmitReview={async (rating, comment) => {
+                    // Lógica para enviar a avaliação, você precisará adaptar
+                    // Se o ReviewModal já faz a requisição, apenas chame fetchAppointments
+                    if (selectedAppointment) {
+                        // Sua lógica de envio de review aqui
+                        console.log(`Enviando review para ${selectedAppointment.id}: ${rating} estrelas, comentário: ${comment}`);
+                        // Após o sucesso da requisição de review, você pode chamar:
+                        await fetchAppointments(); // Para atualizar a lista de agendamentos e o status de review
+                        setIsReviewModalOpen(false);
+                    }
+                }}
+            />
             <ClientAppointmentDetailsModal
                 appointment={selectedAppointment}
                 isOpen={isDetailsModalOpen}
                 onClose={() => setIsDetailsModalOpen(false)}
                 onRescheduleClick={handleOpenRescheduleModal}
                 userTimeZone={userTimeZone}
+                onAppointmentUpdated={handleAppointmentUpdated}
             />
             <RescheduleModal
                 appointment={selectedAppointment}
                 isOpen={isRescheduleModalOpen}
-                onClose={() => setIsRescheduleModalOpen(false)}
+                onClose={() => setIsRescheduleModal(false)}
                 onSubmit={handleRescheduleSubmit}
-                userTimeZone={userTimeZone} // <<< CORREÇÃO: Passando userTimeZone para RescheduleModal
+                userTimeZone={userTimeZone}
             />
         </div>
     )

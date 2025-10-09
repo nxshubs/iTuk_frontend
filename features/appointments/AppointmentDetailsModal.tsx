@@ -29,17 +29,15 @@ export default function AppointmentDetailsModal({
   onClose,
   userType,
   onUpdate,
-  providerTimeZone, // <-- RECEBENDO A NOVA PROP
+  providerTimeZone, 
 }: AppointmentDetailsModalProps) {
   if (!appointment) return null;
 
   const personToShow = userType === "CLIENT" ? appointment.provider : appointment.client;
   
-  // --- MUDANÇA: Usar dayjs para formatar a data e hora no fuso horário do provedor ---
   const appointmentStartDayjs = dayjs.utc(appointment.startTime).tz(providerTimeZone);
   const date = appointmentStartDayjs.format('DD [de] MMMM [de] YYYY');
   const time = appointmentStartDayjs.format('HH:mm');
-  // ------------------------------------------------------------------------------------
 
   const formatPhoneNumberForWhatsApp = (phone: string | undefined) => {
     if (!phone) return "";
