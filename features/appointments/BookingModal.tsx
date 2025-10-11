@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Calendar as CalendarIcon, Clock, Loader2 } from "lucide-react"
@@ -10,20 +10,28 @@ import type { Provider } from "@/types/Provider"
 import Cookies from "js-cookie"
 import { toast } from "sonner"
 
+// Importações e configuração do Day.js
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 interface BookingModalProps {
     provider: Provider | null
     isOpen: boolean
     onClose: () => void
     onBookingSuccess?: () => void
-    userTimeZone: string;
+    userTimeZone: string; // Fuso horário do usuário, ex: 'America/Sao_Paulo'
 }
 
-export default function BookingModal({ provider, isOpen, onClose, onBookingSuccess }: BookingModalProps) {
+export default function BookingModal({ provider, isOpen, onClose, onBookingSuccess, userTimeZone }: BookingModalProps) {
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [selectedTime, setSelectedTime] = useState<string>("");
     const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
-    const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+    const [availableTimesRaw, setAvailableTimesRaw] = useState<string[]>([]);
     const [isLoadingTimes, setIsLoadingTimes] = useState(false);
     const [timeError, setTimeError] = useState<string | null>(null);
 
@@ -31,12 +39,42 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
     const [bookingError, setBookingError] = useState<string | null>(null);
 
     useEffect(() => {
+        setSelectedTime("");
+    }, [selectedDate, selectedServiceId]);
+
+    const filteredAvailableTimes = useMemo(() => {
+        if (!selectedDate || availableTimesRaw.length === 0) {
+            return [];
+        }
+
+        const nowInUserTZ = dayjs().tz(userTimeZone); // Data e hora atual na timezone do usuário
+
+        // Verifica se a data selecionada é o dia de hoje na timezone do usuário
+        const isSelectedDateToday = nowInUserTZ.format('YYYY-MM-DD') === selectedDate;
+
+        // Se for hoje, filtra os horários passados
+        if (isSelectedDateToday) {
+            return availableTimesRaw.filter(time => {
+                // Combina a data selecionada com o horário, na timezone do usuário
+                const slotDateTimeInUserTZ = dayjs(`${selectedDate}T${time}`).tz(userTimeZone);
+
+                // Compara se o slot ainda está no futuro (adicionando um pequeno buffer)
+                return slotDateTimeInUserTZ.isAfter(nowInUserTZ.add(1, 'minute'));
+            });
+        }
+
+        // Se a data selecionada não for hoje, mostra todos os horários brutos
+        return availableTimesRaw;
+    }, [selectedDate, availableTimesRaw, userTimeZone]); // Adicionado userTimeZone às dependências do useMemo
+
+
+    useEffect(() => {
         const fetchAvailableTimes = async () => {
             if (!selectedDate || !provider || !selectedServiceId) return;
 
             setIsLoadingTimes(true);
             setTimeError(null);
-            setAvailableTimes([]);
+            setAvailableTimesRaw([]);
             setSelectedTime("");
 
             const token = Cookies.get('authToken');
@@ -44,15 +82,15 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/availability/${provider.id}/availability?date=${selectedDate}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || "Não foi possível buscar os horários.");
                 }
 
                 const data = await response.json();
-                console.log("Horarios disponiveis do prestadores:", data)
-                setAvailableTimes(data);
+                console.log("Horarios disponiveis do prestadores (raw):", data);
+                setAvailableTimesRaw(data);
 
                 if (data.length === 0) {
                     setTimeError("Nenhum horário livre para esta data.");
@@ -73,8 +111,13 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
         setIsBooking(true);
         setBookingError(null);
         const token = Cookies.get('authToken');
-        
-        const startTime = new Date(`${selectedDate}T${selectedTime}:00.000Z`).toISOString();
+
+        // Combina a data selecionada e o horário na timezone do usuário
+        const dateTimeStringInUserTZ = `${selectedDate}T${selectedTime}:00`;
+        const selectedDateTime = dayjs(dateTimeStringInUserTZ).tz(userTimeZone);
+
+        // Converte para UTC e formata para ISO string para o backend
+        const startTimeISO = selectedDateTime.utc().toISOString();
 
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/client`, {
@@ -85,7 +128,7 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                 },
                 body: JSON.stringify({
                     serviceId: selectedServiceId,
-                    startTime: startTime,
+                    startTime: startTimeISO,
                 })
             });
 
@@ -93,7 +136,7 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Falha ao criar agendamento.");
             }
-            
+
             toast.success("Agendamento solicitado com sucesso!");
             if (onBookingSuccess) onBookingSuccess();
             handleClose();
@@ -112,7 +155,7 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
             setSelectedDate("");
             setSelectedTime("");
             setSelectedServiceId("");
-            setAvailableTimes([]);
+            setAvailableTimesRaw([]);
             setTimeError(null);
             setBookingError(null);
         }, 300);
@@ -148,9 +191,9 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                             type="date"
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
-                            min={new Date().toISOString().split("T")[0]} // Impede selecionar datas passadas
+                            min={dayjs().format('YYYY-MM-DD')} // Garante que a data mínima é hoje
                             className="w-full p-2 border border-input rounded-md bg-background text-foreground"
-                            disabled={!selectedServiceId} // Desabilita até que um serviço seja escolhido
+                            disabled={!selectedServiceId}
                         />
                     </div>
 
@@ -158,9 +201,9 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                         <Label><Clock className="w-4 h-4 inline mr-1" /> Horários disponíveis</Label>
                         {isLoadingTimes && <div className="text-center p-4 text-sm text-muted-foreground">Buscando horários... <Loader2 className="inline w-4 h-4 animate-spin" /></div>}
                         {timeError && <div className="text-center p-4 text-sm text-red-500">{timeError}</div>}
-                        {!isLoadingTimes && !timeError && availableTimes.length > 0 && (
+                        {!isLoadingTimes && !timeError && filteredAvailableTimes.length > 0 && (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                {availableTimes.map((time) => (
+                                {filteredAvailableTimes.map((time) => (
                                     <button
                                         key={time}
                                         onClick={() => setSelectedTime(time)}
@@ -171,9 +214,9 @@ export default function BookingModal({ provider, isOpen, onClose, onBookingSucce
                                 ))}
                             </div>
                         )}
-                            {!isLoadingTimes && !timeError && availableTimes.length === 0 && selectedDate && (
+                        {!isLoadingTimes && !timeError && filteredAvailableTimes.length === 0 && selectedDate && (
                             <div className="text-center p-4 text-sm text-muted-foreground">Nenhum horário encontrado.</div>
-                            )}
+                        )}
                     </div>
 
                     <Button
