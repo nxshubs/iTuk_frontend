@@ -1,3 +1,4 @@
+// pages/dashboard/provider/profile/edit/page.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -27,6 +28,7 @@ import { EditProfileSkeleton } from "@/components/skeletons/EditProfileSkeleton"
 // Imports de Tipos
 import { Provider } from "@/types/Provider";
 import { Service } from "@/types/Service"
+import { Availability } from "@/types/Availability";
 import { useUser } from "@/hooks/useUser";
 
 export default function EditProfilePage() {
@@ -72,7 +74,7 @@ export default function EditProfilePage() {
             }
         };
         fetchUserData();
-    }, [router]);
+    }, [router, refetchUser]); // Adicione refetchUser como dependência se ele for uma função estável ou use useCallback
 
     const handleInputChange = (field: keyof Provider, value: any) => {
         setProfileData((prev) => (prev ? { ...prev, [field]: value } : null));
@@ -121,13 +123,14 @@ export default function EditProfilePage() {
         handleInputChange("portfolio", currentPortfolio.filter(image => image.id !== id));
     };
 
+    // FUNÇÃO PARA SALVAR A GALERIA (já existia, só para referência)
     const handleSaveGallery = async () => {
         const token = Cookies.get('authToken');
         if (!profileData || !profileData.portfolio) return;
         
         const portfolioPayload = {
             portfolio: profileData.portfolio.map(({ id, imageUrl }) => ({
-                id: id.startsWith('new-') ? undefined : id,
+                id: id.startsWith('new-') ? undefined : id, // Backend pode precisar de `undefined` para novos itens
                 imageUrl: imageUrl,
             }))
         };
@@ -146,11 +149,69 @@ export default function EditProfilePage() {
                 const result = await response.json();
                 throw new Error(result.error || "Falha ao salvar a galeria.");
             }
+            // Não toast.success aqui, o Gallery já faz isso
         } catch (error: any) {
             toast.error(error.message);
             throw error;
         }
     };
+
+    // FUNÇÃO PARA SALVAR A DISPONIBILIDADE (CORRIGIDA)
+    const handleSaveAvailability = async (newAvailability: Availability[]) => {
+        const token = Cookies.get('authToken');
+        if (!profileData) return;
+
+        // Atualiza o estado local temporariamente (sem salvar no backend ainda)
+        // Isso é importante para que a UI reflita as mudanças imediatamente
+        // antes mesmo do backend responder, melhorando a responsividade.
+        handleInputChange('availability', newAvailability);
+
+        // --- INÍCIO DA CORREÇÃO ---
+        // Prepara o payload para o backend no formato WeeklySchedulePayload
+        // Agrupa os itens de newAvailability pelo dayOfWeek
+        const groupedSchedule: { [key: string]: { start: string; end: string }[] } = {};
+        newAvailability.forEach(slot => {
+            const dayKey = slot.dayOfWeek.toString();
+            if (!groupedSchedule[dayKey]) {
+                groupedSchedule[dayKey] = [];
+            }
+            groupedSchedule[dayKey].push({
+                start: slot.startTime,
+                end: slot.endTime,
+            });
+        });
+
+        const availabilityPayload = {
+            // AQUI ESTÁ A CORREÇÃO: o backend espera um objeto com a chave 'schedule'
+            // cujo valor é o objeto agrupado por dia da semana.
+            schedule: groupedSchedule
+        };
+        // --- FIM DA CORREÇÃO ---
+        
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/availability`, {
+                method: 'POST', // Confirme se o backend realmente usa POST para updateSchedule
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(availabilityPayload)
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error || "Falha ao salvar horários de funcionamento.");
+            }
+            toast.success("Horários de funcionamento atualizados!");
+            // Refetch para garantir que os IDs de novos slots sejam atualizados no estado global
+            // após o backend ter criado ou atualizado os slots.
+            await refetchUser(); 
+        } catch (error: any) {
+            toast.error(error.message);
+            throw error; // Propagar o erro para o `Schedules` lidar com `isSaving`
+        }
+    };
+
 
     const handleSave = async () => {
         const token = Cookies.get('authToken');
@@ -171,21 +232,28 @@ export default function EditProfilePage() {
             formData.append('name', profileData.name || '');
             formData.append('whatsapp', profileData.whatsapp || '');
             formData.append('telephone', profileData.telephone || '');
-            formData.append('profession', profileData.services[0]?.name || '');
+            // Verifica se services existe e tem pelo menos um item antes de acessar [0]?.name
+            formData.append('profession', profileData.services?.[0]?.name || ''); 
             formData.append('description', profileData.description || '');
             formData.append('address', profileData.address || '');
             formData.append('experience', profileData.experience || '');
             formData.append('paymentMethods', JSON.stringify(profileData.paymentMethods || []));
             formData.append('services', JSON.stringify(profileData.services || []));
-            formData.append('availability', JSON.stringify(profileData.availability || []));
-            formData.append('portfolio', JSON.stringify(profileData.portfolio || []));
+            
+            // Remova availability e portfolio daqui, pois eles são salvos separadamente agora.
+            // formData.append('availability', JSON.stringify(profileData.availability || []));
+            // formData.append('portfolio', JSON.stringify(profileData.portfolio || []));
             
             body = formData;
         } else {
             headers['Content-Type'] = 'application/json';
             body = JSON.stringify({
                 ...profileData,
-                profession: profileData.services[0]?.name || ''
+                // Verifica se services existe e tem pelo menos um item antes de acessar [0]?.name
+                profession: profileData.services?.[0]?.name || '',
+                // Remova availability e portfolio daqui também
+                availability: undefined, // Envie como undefined para não serem atualizados pelo endpoint principal
+                portfolio: undefined,
             });
         }
 
@@ -248,8 +316,9 @@ export default function EditProfilePage() {
                     onRemoveService={handleRemoveService}
                     onUpdateService={handleUpdateService}
                 />
-                <Schedules
+                <Schedules // <-- Passa a nova prop
                     availability={profileData.availability}
+                    onSaveAvailability={handleSaveAvailability} 
                 />
                 <PaymentMethods
                     paymentMethods={profileData.paymentMethods}

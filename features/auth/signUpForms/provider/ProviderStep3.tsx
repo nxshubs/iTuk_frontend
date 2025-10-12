@@ -78,7 +78,7 @@ export function ProviderStep3({
                                 <div key={service} className="flex items-center space-x-3">
                                     <div className="flex-1"><Label className="text-sm font-normal">{service}</Label></div>
                                     <div className="relative w-32">
-                                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <div>R$</div>
                                         <Input 
                                             type="text" 
                                             placeholder="0,00" 
